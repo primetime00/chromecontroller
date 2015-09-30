@@ -1,0 +1,11 @@
+package rProtos;
+
+option java_package = "com.kegelapps.chromeboxcontroller.proto";
+option java_outer_classname = "ServiceDiscoveryProto";
+
+message ServiceDiscovery {
+    required bool found = 1;
+    required string ip_address = 2;
+    required int32 port = 3;
+    optional string mac = 4;
+}
