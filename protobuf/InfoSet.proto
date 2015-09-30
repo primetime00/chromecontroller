@@ -1,0 +1,11 @@
+package rProtos;
+
+option java_package = "com.kegelapps.chromeboxcontroller.proto";
+option java_outer_classname = "InfoSetProto";
+
+message InfoSet {
+	optional int64 id = 1 [default = 0];
+
+	optional string location = 2;
+	optional string name = 3;
+}

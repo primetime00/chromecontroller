@@ -1,0 +1,27 @@
+package rProtos;
+
+option java_package = "com.kegelapps.chromeboxcontroller.proto";
+option java_outer_classname = "ScriptCommandProto";
+
+message ScriptInfo {
+    required string name = 1;
+    optional string output_type = 2;
+    repeated string associated_command = 3;
+    repeated string params = 4;
+    optional string return_data = 5;
+    optional int32 return_value = 6;
+    optional bool run_failed = 7 [default = false];
+}
+
+message ScriptCommand {
+	required ScriptInfo info = 1;
+	optional string script = 2;
+}
+
+message ScriptCommandList {
+    repeated ScriptCommand scripts = 1;
+}
+
+message ScriptInfoList {
+    repeated ScriptInfo scripts = 1;
+}

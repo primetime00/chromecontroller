@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="ChromeController" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="Debug">
+				<Option output="bin/Debug/ChromeController" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-g" />
+				</Compiler>
+			</Target>
+			<Target title="Release">
+				<Option output="bin/Release/ChromeController" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+				</Linker>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-std=c++11" />
+			<Add option="-Wall" />
+			<Add directory="/home/ryan/Boost/boost_1_58_0" />
+			<Add directory="../../protobuf" />
+		</Compiler>
+		<Linker>
+			<Add option="-lpthread" />
+			<Add library="/home/ryan/Boost/boost_1_58_0/stage/lib/libboost_regex.a" />
+			<Add library="/home/ryan/Boost/boost_1_58_0/stage/lib/libboost_system.a" />
+			<Add library="/usr/local/lib/libprotobuf.a" />
+			<Add library="/home/ryan/Boost/boost_1_58_0/stage/lib/libboost_filesystem.a" />
+		</Linker>
+		<Unit filename="../../../protobuf/DeviceInfo.proto" />
+		<Unit filename="../../../protobuf/InfoRequest.proto" />
+		<Unit filename="../../../protobuf/InfoSet.proto" />
+		<Unit filename="../../../protobuf/Message.proto" />
+		<Unit filename="../../../protobuf/Ping.proto" />
+		<Unit filename="../../../protobuf/Pong.proto" />
+		<Unit filename="../../../protobuf/ScriptCommand.proto" />
+		<Unit filename="../../main.cpp" />
+		<Unit filename="../../protobuf/DeviceInfo.pb.cc" />
+		<Unit filename="../../protobuf/DeviceInfo.pb.h" />
+		<Unit filename="../../protobuf/InfoRequest.pb.cc" />
+		<Unit filename="../../protobuf/InfoRequest.pb.h" />
+		<Unit filename="../../protobuf/InfoSet.pb.cc" />
+		<Unit filename="../../protobuf/InfoSet.pb.h" />
+		<Unit filename="../../protobuf/Message.pb.cc" />
+		<Unit filename="../../protobuf/Message.pb.h" />
+		<Unit filename="../../protobuf/Ping.pb.cc" />
+		<Unit filename="../../protobuf/Ping.pb.h" />
+		<Unit filename="../../protobuf/Pong.pb.cc" />
+		<Unit filename="../../protobuf/Pong.pb.h" />
+		<Unit filename="../../protobuf/ScriptCommand.pb.cc" />
+		<Unit filename="../../protobuf/ScriptCommand.pb.h" />
+		<Unit filename="../../rEngine/AvahiServiceFile.cpp" />
+		<Unit filename="../../rEngine/AvahiServiceFile.h" />
+		<Unit filename="../../rEngine/NetInfo.cpp" />
+		<Unit filename="../../rEngine/NetInfo.h" />
+		<Unit filename="../../rEngine/Scripts.cpp" />
+		<Unit filename="../../rEngine/Scripts.h" />
+		<Unit filename="../../rEngine/rEngine.cpp" />
+		<Unit filename="../../rEngine/rEngine.h" />
+		<Unit filename="../../rNetwork/NetworkConnection.cpp" />
+		<Unit filename="../../rNetwork/NetworkConnection.h" />
+		<Unit filename="../../rNetwork/NetworkService.cpp" />
+		<Unit filename="../../rNetwork/NetworkService.h" />
+		<Unit filename="../../rNetwork/ServerAcceptor.cpp" />
+		<Unit filename="../../rNetwork/ServerAcceptor.h" />
+		<Unit filename="../../rNetwork/rServer.cpp" />
+		<Unit filename="../../rNetwork/rServer.h" />
+		<Unit filename="../../rNetwork/rTestClient.cpp" />
+		<Unit filename="../../rNetwork/rTestClient.h" />
+		<Unit filename="../../rProcessor/Keys.h" />
+		<Unit filename="../../rProcessor/Types.h" />
+		<Unit filename="../../rProcessor/rProcessor.cpp" />
+		<Unit filename="../../rProcessor/rProcessor.h" />
+		<Extensions>
+			<code_completion />
+			<debugger />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>

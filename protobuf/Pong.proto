@@ -1,0 +1,8 @@
+package rProtos;
+
+option java_package = "com.kegelapps.chromeboxcontroller.proto";
+option java_outer_classname = "PongProto";
+
+message Pong {
+	required int64 id = 1;
+}

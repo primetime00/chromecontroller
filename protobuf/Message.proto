@@ -1,0 +1,23 @@
+package rProtos;
+
+option java_package = "com.kegelapps.chromeboxcontroller.proto";
+option java_outer_classname = "MessageProto";
+
+import "Ping.proto";
+import "Pong.proto";
+import "InfoRequest.proto";
+import "DeviceInfo.proto";
+import "InfoSet.proto";
+import "ScriptCommand.proto";
+
+message Message {
+	required int64			id			= 1;
+
+	optional Ping			ping		= 2;
+	optional Pong			pong		= 3;
+	optional InfoRequest	infoRequest = 4;
+	optional DeviceInfo		deviceInfo	= 5;
+	optional InfoSet		infoSet		= 6;
+	optional ScriptInfo     command     = 7;
+	optional ScriptInfoList commandList = 8;
+}

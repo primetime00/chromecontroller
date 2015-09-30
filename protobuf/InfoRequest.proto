@@ -1,0 +1,8 @@
+package rProtos;
+
+option java_package = "com.kegelapps.chromeboxcontroller.proto";
+option java_outer_classname = "InfoRequestProto";
+
+message InfoRequest {
+	optional int64 id = 1 [default = 0];
+}

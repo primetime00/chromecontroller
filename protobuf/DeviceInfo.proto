@@ -1,0 +1,15 @@
+package rProtos;
+
+option java_package = "com.kegelapps.chromeboxcontroller.proto";
+option java_outer_classname = "DeviceInfoProto";
+
+message DeviceInfo {
+	optional int64 id = 1 [default = 0];
+	
+	required string ip = 2;
+	required string mac = 3;
+	optional string location = 4;
+	optional string name = 5;
+	optional string mode = 6;
+	optional int32 port = 7;
+}
