@@ -12,11 +12,10 @@ import com.kegelapps.chromeboxcontroller.proto.MessageProto;
 import com.kegelapps.chromeboxcontroller.proto.PingProto;
 
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.Timer;
-import java.util.TimerTask;
 
 /**
  * Created by Ryan on 9/7/2015.
@@ -30,47 +29,52 @@ public class NetworkRunnable implements Runnable {
     private String mIP;
     private int mPort;
     private Socket mSocket;
-    private byte [] mRecvBuffer;
+    private byte[] mRecvBuffer;
     private ByteBuffer mBuffer;
     int position = 0;
 
     private int mNetworkMessageId;
 
-    private long mLastRecv = 0;
-    private Runnable mTimerRunnable;
-    private long mNextPing = 0;
+    private PingEngine mPingEngine;
 
-    private Timer mPingTimer;
-    private int mPingId;
-
-    public Handler mNetworkHandler;
+    public MessageHandler mNetworkHandler;
 
     private Context context;
     private ControllerService.OnConnection mListener;
+
+    static class MessageHandler extends Handler {
+        private final WeakReference<NetworkRunnable> mNetwork;
+
+        public MessageHandler(NetworkRunnable network) {
+            this.mNetwork = new WeakReference<NetworkRunnable>(network);
+        }
+
+        @Override
+        public void handleMessage(Message msg) {
+            if (msg.what == NETWORK_THREAD_EXIT) {
+                Looper.myLooper().quit();
+                return;
+            }
+            NetworkRunnable net = mNetwork.get();
+            if (net != null)
+                net.handleNetworkMessage(msg);
+        }
+    }
 
     public NetworkRunnable(Context context, ControllerService.OnConnection listener) {
         assert (context != null);
         assert (listener != null);
         this.context = context;
         this.mListener = listener;
-
-        mTimerRunnable = new Runnable() {
-
-            @Override
-            public void run() {
-                onTimer();
-            }
-        };
     }
 
     @Override
     public void run() {
         mRecvBuffer = new byte[50000];
-        mPingId = 0; //this is the ping packet number
         mNetworkMessageId = 0; //this is the packet number for all sent packets
-        mNextPing = System.currentTimeMillis() + 2000; //ping in the next 2 seconds
         mBuffer = ByteBuffer.wrap(mRecvBuffer);
         Looper.prepare();
+
         try {
             mSocket = new Socket(mIP, mPort);
         } catch (IOException e) { //could not connect for some reason?
@@ -79,37 +83,27 @@ public class NetworkRunnable implements Runnable {
             return;
         }
 
-        createPingTimer();
-
         //Start the receive Thread
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                recvFunction();
-                Log.d("NetworkRunnable", "Receive thread is shutting down.");
-            }
-        }).start();
+        startReceiveThread();
 
 
         //create the loop handler
-        mNetworkHandler = new Handler() {
-            @Override
-            public void handleMessage(Message msg) {
-                if (msg.what == NETWORK_THREAD_EXIT) {
-                    Looper.myLooper().quit();
-                    return;
-                }
-                handleNetworkMessage(msg);
-            }
-        };
+        mNetworkHandler = new MessageHandler(this);
 
-        mNetworkHandler.postDelayed(mTimerRunnable, 1000);
+        mPingEngine = new PingEngine(1000, 4000, 5000, mNetworkHandler);
+        mPingEngine.setOnDisconnectTimer(new PingEngine.OnPingDisconnectTimer() {
+            @Override
+            public void onDisconnectTimeout() {
+                Log.d("NetworkRunnable", "I'm had nothing for 5 seconds, timing out!");
+                closeNetwork();
+                mListener.onDisconnected("I am no longer receiving data from the server.");
+            }
+        });
+        mPingEngine.start(1000);
+
 
         //enter main loop
         Looper.loop();
-
-        if (mPingTimer != null)
-            mPingTimer.cancel();
 
         try {
             mSocket.close();
@@ -119,17 +113,14 @@ public class NetworkRunnable implements Runnable {
         Log.d("NetworkRunnable", "Looper thread is shutting down.");
     }
 
-    private void createPingTimer() {
-        mPingTimer = new Timer();
-        TimerTask task = new TimerTask() {
+    private void startReceiveThread() {
+        new Thread(new Runnable() {
             @Override
             public void run() {
-                Message m = Message.obtain();
-                m.what = NETWORK_THREAD_PING;
-                mNetworkHandler.sendMessage(m);
+                recvFunction();
+                Log.d("NetworkRunnable", "Receive thread is shutting down.");
             }
-        };
-        //mPingTimer.schedule(task, 2000, 4000);
+        }).start();
     }
 
     private void handleNetworkMessage(Message msg) {
@@ -145,7 +136,7 @@ public class NetworkRunnable implements Runnable {
                 }
                 break;
             case NETWORK_THREAD_PING: //sending a ping message
-                data = createPingMessage();
+                data = createPingMessage(msg.arg1);
                 Log.d("NetworkRunnable", "Sending a ping message");
                 sendMessagePacket(data);
                 break;
@@ -156,7 +147,7 @@ public class NetworkRunnable implements Runnable {
 
     private void sendMessagePacket(MessageProto.Message msg) {
         assert (msg != null);
-        ByteBuffer data = ByteBuffer.allocate(msg.getSerializedSize()+4);
+        ByteBuffer data = ByteBuffer.allocate(msg.getSerializedSize() + 4);
         data.order(ByteOrder.LITTLE_ENDIAN);
         data.putInt(msg.getSerializedSize());
         data.put(msg.toByteArray());
@@ -167,8 +158,8 @@ public class NetworkRunnable implements Runnable {
         }
     }
 
-    private MessageProto.Message createPingMessage() {
-        PingProto.Ping p = PingProto.Ping.newBuilder().setId(mPingId++).build();
+    private MessageProto.Message createPingMessage(int id) {
+        PingProto.Ping p = PingProto.Ping.newBuilder().setId(id).build();
         MessageProto.Message m = MessageProto.Message.newBuilder().setPing(p).setId(getNetworkId()).build();
         return m;
     }
@@ -201,15 +192,16 @@ public class NetworkRunnable implements Runnable {
                     return;
                 }
                 if (read > 0)
-                    mLastRecv = System.currentTimeMillis();
+                    mPingEngine.resetTimer();
+
                 if (position == 0 && read < 4)
                     continue;
                 length = mBuffer.getInt(0);
-                while (read >= length+4) {
+                while (read >= length + 4) {
                     ByteBuffer data = extractMessageData(mRecvBuffer, length);
                     MessageProto.Message msg = MessageProto.Message.parseFrom(data.array());
                     processMessage(msg);
-                    read -= (length+4);
+                    read -= (length + 4);
                     position = read;
                     if (read < 4)
                         break;
@@ -238,24 +230,5 @@ public class NetworkRunnable implements Runnable {
 
     public Handler getHandler() {
         return mNetworkHandler;
-    }
-
-    private void onTimer()
-    {
-        long now = System.currentTimeMillis();
-        if (now - mLastRecv > 5000) //we haven't had data for 5 seconds
-        {
-            Log.d("NetworkRunnable", "I'm had nothing for 5 seconds, timing out!");
-            closeNetwork();
-            mListener.onDisconnected("I am no longer receiving data from the server.");
-            return;
-        }
-        if (now >= mNextPing) {
-            mNextPing = now+4000;
-            Message m = Message.obtain();
-            m.what = NETWORK_THREAD_PING;
-            mNetworkHandler.sendMessage(m);
-        }
-        mNetworkHandler.postDelayed(mTimerRunnable, 1000);
     }
 }

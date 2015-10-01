@@ -11,7 +11,7 @@ import "InfoSet.proto";
 import "ScriptCommand.proto";
 
 message Message {
-	required int64			id			= 1;
+	optional int64			id			= 1;
 
 	optional Ping			ping		= 2;
 	optional Pong			pong		= 3;
