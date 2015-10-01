@@ -87,7 +87,6 @@ bool rEngine::createServer()
 		mDevInfo->set_ip(ip);
 		avahi::createServiceInfoFile("/etc/avahi/services/remotecontrol.service", *mDevInfo);
 	}
-	ip = "";
 	mServer->Listen(ip, 30015);
 	mServer->SetRecvFunction(boost::bind(&rEngine::dataReceived, this, _1, _2));
 	mServer->SetConnectFunction(boost::bind(&rEngine::connectionEstablished, this));

@@ -24,7 +24,7 @@ void rProcessor::insertPacket(sData data)
 		executeMessage(RPROCESSOR_KEY_PING, m);
 	if (m->has_pong())
 		executeMessage(RPROCESSOR_KEY_PONG, m);
-	if (m->has_inforequest());
+	if (m->has_inforequest())
 		executeMessage(RPROCESSOR_KEY_INFOREQUEST, m);
 	if (m->has_infoset())
 		executeMessage(RPROCESSOR_KEY_INFOSET, m);
