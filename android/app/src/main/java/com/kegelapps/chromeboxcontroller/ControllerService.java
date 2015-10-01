@@ -8,11 +8,10 @@ import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
 import android.os.RemoteException;
-import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.kegelapps.chromeboxcontroller.proto.DeviceInfoProto;
-import com.kegelapps.chromeboxcontroller.proto.ServiceDiscoveryProto;
+import com.kegelapps.chromeboxcontroller.proto.MessageProto;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,12 +21,14 @@ import java.util.List;
  */
 public class ControllerService extends Service {
 
-    static final int MESSAGE_START              = 1;
-    static final int MESSAGE_DISCOVERY          = 2;
-    static final int MESSAGE_CONNECTION_FAILED  = 3;
+    static final int MESSAGE_START                  = 1;
+    static final int MESSAGE_DISCOVERY              = 2;
+    static final int MESSAGE_CONNECTION_FAILED      = 3;
+    static final int MESSAGE_CONNECTION_DISCONNECT  = 4;
 
 
-    static final String MESSAGE_DATA_NAME = "data";
+    static final String MESSAGE_DATA_NAME_KEY           = "data";
+    static final String MESSAGE_DISCONNECT_MESSAGE_KEY  = "reason";
 
     private final IBinder mBinder = new LocalBinder();
     private boolean mRunning = false;
@@ -47,6 +48,7 @@ public class ControllerService extends Service {
 
     public interface OnConnection {
         void onConnectionFailed();
+        void onDisconnected(String message);
     }
 
     @Override
@@ -64,15 +66,15 @@ public class ControllerService extends Service {
                 Message serviceMsg = Message.obtain();
                 serviceMsg.what = MESSAGE_DISCOVERY;
                 Bundle b = new Bundle();
-                b.putByteArray(MESSAGE_DATA_NAME, data.toByteArray());
+                b.putByteArray(MESSAGE_DATA_NAME_KEY, data.toByteArray());
                 serviceMsg.setData(b);
-                sendMessage(serviceMsg);
+                sendUIMessage(serviceMsg);
             }
         });
         createNetworkRunnable();
         Message startMsg = Message.obtain();
         startMsg.what = MESSAGE_START;
-        sendMessage(startMsg);
+        sendUIMessage(startMsg);
         return super.onStartCommand(intent, flags, startId);
     }
 
@@ -82,18 +84,39 @@ public class ControllerService extends Service {
             public void onConnectionFailed() {
                 Message serviceMsg = Message.obtain();
                 serviceMsg.what = MESSAGE_CONNECTION_FAILED;
-                sendMessage(serviceMsg);
+                sendUIMessage(serviceMsg);
+            }
+
+            @Override
+            public void onDisconnected(String message) {
+                Message serviceMsg = Message.obtain();
+                serviceMsg.what = MESSAGE_CONNECTION_DISCONNECT;
+                Bundle b = new Bundle();
+                b.putString(MESSAGE_DISCONNECT_MESSAGE_KEY, message);
+                serviceMsg.setData(b);
+                sendUIMessage(serviceMsg);
             }
         });
     }
 
-    private void sendMessage(Message msg) {
+    private void sendUIMessage(Message msg) {
         try {
             mMessenger.send(msg);
         } catch (RemoteException e) {
             Log.e("Service", "Could not send a message " + msg.what + " to activity.");
             e.printStackTrace();
         }
+    }
+
+    public void sendNetworkMessage(MessageProto.Message msg) {
+        if (mNetworkRunnable == null)
+            return;
+        Message m = Message.obtain();
+        m.what = NetworkRunnable.NETWORK_THREAD_SEND;
+        Bundle b = new Bundle();
+        b.putByteArray(NetworkRunnable.NETWORK_DATA_KEY, msg.toByteArray());
+        m.setData(b);
+        mNetworkRunnable.getHandler().sendMessage(m);
     }
 
     @Override

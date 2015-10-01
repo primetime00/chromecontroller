@@ -17,6 +17,7 @@ import android.widget.ListView;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.kegelapps.chromeboxcontroller.proto.DeviceInfoProto;
+import com.kegelapps.chromeboxcontroller.proto.PingProto;
 
 /**
  * Created by Ryan on 9/5/2015.
@@ -38,10 +39,9 @@ public class DeviceListFragment extends Fragment {
         mAdapter = new DeviceListAdapter(getActivity());
 
         createMessageHandler();
-
         DeviceInfoProto.DeviceInfo dev = DeviceInfoProto.DeviceInfo.newBuilder().
-                setMode("Steam").setPort(33).setLocation("Bedroom").setIp("192.168.1.1").
-                setId(1).setMac("aa:bb:cc:dd:ee:ff").build();
+                setMode("Steam").setPort(30015).setLocation("Work").setIp("10.1.213.162").
+                setId(1).setMac("08:00:27:7a:77:af").build();
         mAdapter.addDevice(dev);
 
         mDeviceList.setAdapter(mAdapter);
@@ -91,6 +91,7 @@ public class DeviceListFragment extends Fragment {
         if (mActivity == null || mActivity.getService() == null) {
             listener.onDeviceConnectFailed();
         }
+        mActivity.getService().startNetwork(deviceInfo);
     }
 
     private void stopDiscoveryService() {
@@ -134,7 +135,7 @@ public class DeviceListFragment extends Fragment {
                 switch (msg.what)
                 {
                     case ControllerService.MESSAGE_DISCOVERY:
-                        byte [] data = msg.getData().getByteArray(ControllerService.MESSAGE_DATA_NAME);
+                        byte [] data = msg.getData().getByteArray(ControllerService.MESSAGE_DATA_NAME_KEY);
                         if (data == null)
                             return;
                         try {
@@ -149,6 +150,14 @@ public class DeviceListFragment extends Fragment {
                         break;
                     case ControllerService.MESSAGE_CONNECTION_FAILED:
                         showConnectionFailedDialog();
+                        break;
+                    case ControllerService.MESSAGE_CONNECTION_DISCONNECT:
+                        UIHelpers.showDisconnectDialog(getActivity(), msg.getData().getString(ControllerService.MESSAGE_DISCONNECT_MESSAGE_KEY, ""), new DialogInterface.OnDismissListener() {
+                            @Override
+                            public void onDismiss(DialogInterface dialog) {
+                                return;
+                            }
+                        });
                         break;
                     default:
                         break;
