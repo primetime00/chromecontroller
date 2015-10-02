@@ -23,8 +23,12 @@ public class ControllerService extends Service {
 
     static final int MESSAGE_START                  = 1;
     static final int MESSAGE_DISCOVERY              = 2;
-    static final int MESSAGE_CONNECTION_FAILED      = 3;
-    static final int MESSAGE_CONNECTION_DISCONNECT  = 4;
+    static final int MESSAGE_CONNECTION_SUCCESS     = 3;
+    static final int MESSAGE_CONNECTION_FAILED      = 4;
+    static final int MESSAGE_CONNECTION_DISCONNECT  = 5;
+    static final int MESSAGE_RECEIVED_MESSAGE       = 6;
+    static final int MESSAGE_DISCONNECT_NETWORK     = 7;
+
 
 
     static final String MESSAGE_DATA_NAME_KEY           = "data";
@@ -38,8 +42,11 @@ public class ControllerService extends Service {
     private Messenger mMessenger;
     private List<OnMessage> mMessageHandlerList;
 
+    //storable info
+    private DeviceInfoProto.DeviceInfo mCurrentDeviceInfo;
+
     public interface OnMessage {
-        void onMessage(Message msg);
+        void onMessage(Message msg, MessageProto.Message data);
 
     }
     public interface OnServiceDiscovery {
@@ -47,8 +54,10 @@ public class ControllerService extends Service {
     }
 
     public interface OnConnection {
+        void onConnectionSuccess();
         void onConnectionFailed();
         void onDisconnected(String message);
+        void onReceivedMessage(MessageProto.Message msg);
     }
 
     @Override
@@ -88,6 +97,13 @@ public class ControllerService extends Service {
             }
 
             @Override
+            public void onConnectionSuccess() {
+                Message serviceMsg = Message.obtain();
+                serviceMsg.what = MESSAGE_CONNECTION_SUCCESS;
+                sendUIMessage(serviceMsg);
+            }
+
+            @Override
             public void onDisconnected(String message) {
                 Message serviceMsg = Message.obtain();
                 serviceMsg.what = MESSAGE_CONNECTION_DISCONNECT;
@@ -96,7 +112,34 @@ public class ControllerService extends Service {
                 serviceMsg.setData(b);
                 sendUIMessage(serviceMsg);
             }
+
+            @Override
+            public void onReceivedMessage(MessageProto.Message msg) {
+                processMessage(msg);
+            }
         });
+    }
+
+    private void processMessage(MessageProto.Message msg) {
+        if (msg.hasDeviceInfo()) { //we have device info!
+            storeDeviceInfo(msg.getDeviceInfo());
+        }
+        Message uiMessage = Message.obtain();
+        uiMessage.what = MESSAGE_RECEIVED_MESSAGE;
+        Bundle b = new Bundle();
+        b.putByteArray(MESSAGE_DATA_NAME_KEY, msg.toByteArray());
+        uiMessage.setData(b);
+        sendUIMessage(uiMessage);
+    }
+
+    private synchronized void storeDeviceInfo(DeviceInfoProto.DeviceInfo deviceInfo) {
+        mCurrentDeviceInfo = DeviceInfoProto.DeviceInfo.newBuilder(deviceInfo).build();
+    }
+
+    public synchronized DeviceInfoProto.DeviceInfo getDeviceInfo() {
+        if (mCurrentDeviceInfo == null)
+            return null;
+        return DeviceInfoProto.DeviceInfo.newBuilder(mCurrentDeviceInfo).build();
     }
 
     private void sendUIMessage(Message msg) {
@@ -157,6 +200,11 @@ public class ControllerService extends Service {
     public void startNetwork(DeviceInfoProto.DeviceInfo dev) {
         mNetworkRunnable.setConnection(dev);
         new Thread(mNetworkRunnable).start();
+    }
+
+    public void disconnectNetwork() {
+        if (mNetworkRunnable != null && mNetworkRunnable.getHandler() != null)
+            mNetworkRunnable.closeNetwork();
     }
 
     public void addMessageHandler(OnMessage handler) {

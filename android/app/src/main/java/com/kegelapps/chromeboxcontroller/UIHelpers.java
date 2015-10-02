@@ -4,14 +4,17 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.support.v4.app.Fragment;
 import android.support.v7.app.AlertDialog;
+import android.text.InputType;
+import android.widget.EditText;
 
 /**
  * Created by Ryan on 9/6/2015.
  */
 public class UIHelpers {
 
-    public interface OnDeviceNamedListener {
-        void onDeviceNamed(String name);
+    public interface OnDeviceTextEntry {
+        void onTextEntry(String name);
+        void onCancelled();
     }
 
     public interface OnDeviceConnected {
@@ -73,6 +76,35 @@ public class UIHelpers {
                 dialog.dismiss();
             }
         });
+        builder.show();
+    }
+
+    public static void textEntry(Context c, String title, final OnDeviceTextEntry listener) {
+        assert (listener != null);
+        AlertDialog.Builder builder = new AlertDialog.Builder(c);
+        builder.setTitle(title);
+        final EditText input = new EditText(c);
+        input.setInputType(InputType.TYPE_CLASS_TEXT);
+        builder.setView(input);
+        builder.setCancelable(false);
+
+        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                String name = input.getText().toString();
+                if (name.length() > 0)
+                    listener.onTextEntry(name);
+                dialog.dismiss();
+            }
+        });
+        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.cancel();
+                listener.onCancelled();
+            }
+        });
+
         builder.show();
     }
 }

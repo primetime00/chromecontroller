@@ -21,6 +21,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.support.v4.widget.DrawerLayout;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.kegelapps.chromeboxcontroller.proto.MessageProto;
+
 public class BaseActivity extends AppCompatActivity
         implements NavigationDrawerFragment.NavigationDrawerCallbacks {
 
@@ -172,12 +175,22 @@ public class BaseActivity extends AppCompatActivity
     class ServiceMessageHandler extends Handler {
         @Override
         public void handleMessage(Message msg) {
-            if (msg.what == ControllerService.MESSAGE_START) {
-                mParentFragment.openDeviceList();
+            MessageProto.Message data = null;
+            switch (msg.what) {
+                case ControllerService.MESSAGE_START:
+                    mParentFragment.openDeviceList();
+                    break;
+                case ControllerService.MESSAGE_RECEIVED_MESSAGE:
+                    try {
+                        data = MessageProto.Message.parseFrom(msg.getData().getByteArray(ControllerService.MESSAGE_DATA_NAME_KEY));
+                    } catch (InvalidProtocolBufferException e) {
+                        e.printStackTrace();
+                        return;
+                    }
             }
             if (mControllerService != null && mServiceBound) {
                 for (ControllerService.OnMessage handler : mControllerService.getMessageHandlers()) {
-                    handler.onMessage(msg);
+                    handler.onMessage(msg, data);
                 }
             }
         }

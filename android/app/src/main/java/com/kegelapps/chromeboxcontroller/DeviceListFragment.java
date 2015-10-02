@@ -6,25 +6,22 @@ import android.os.Message;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v7.app.AlertDialog;
-import android.text.InputType;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
-import android.widget.EditText;
 import android.widget.ListView;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.kegelapps.chromeboxcontroller.proto.DeviceInfoProto;
 import com.kegelapps.chromeboxcontroller.proto.InfoSetProto;
 import com.kegelapps.chromeboxcontroller.proto.MessageProto;
-import com.kegelapps.chromeboxcontroller.proto.PingProto;
 
 /**
  * Created by Ryan on 9/5/2015.
  */
-public class DeviceListFragment extends Fragment {
+public class DeviceListFragment extends Fragment implements UIHelpers.OnDeviceConnected{
 
     private View mRootView;
     private ListView mDeviceList;
@@ -33,6 +30,13 @@ public class DeviceListFragment extends Fragment {
     private BaseActivity mActivity;
     private DeviceInfoProto.DeviceInfo mDeviceInfo;
 
+
+    @Nullable
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        mRootView = inflater.inflate(R.layout.cb_device_list, container, false);
+        return mRootView;
+    }
 
     @Override
     public void onViewCreated(View view, Bundle savedInstanceState) {
@@ -52,33 +56,7 @@ public class DeviceListFragment extends Fragment {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 mDeviceInfo = (DeviceInfoProto.DeviceInfo) mAdapter.getItem(position);
-                connectToDevice(mDeviceInfo, new UIHelpers.OnDeviceConnected() {
-                    @Override
-                    public void onDeviceConnected() { //we have connected to our device, lets see if it has a name!
-                        stopDiscoveryService();
-                        if (!mDeviceInfo.hasName()) { //it doesn't have a name, allow a name.
-                            nameDevice(new UIHelpers.OnDeviceNamedListener() {
-                                @Override
-                                public void onDeviceNamed(String name) { //the device is named, lets push that name to the server
-                                    mDeviceInfo = mDeviceInfo.toBuilder().setName(name).build();
-                                    InfoSetProto.InfoSet info = InfoSetProto.InfoSet.newBuilder().setName(name).build();
-                                    MessageProto.Message msg = MessageProto.Message.newBuilder().setInfoSet(info).build();
-                                    if (mActivity != null && mActivity.getService() != null) {
-                                        mActivity.getService().sendNetworkMessage(msg);
-                                        openDeviceMenu();
-                                    }
-                                }
-                            });
-                            return;
-                        }
-                        openDeviceMenu();
-                    }
-
-                    @Override
-                    public void onDeviceConnectFailed() { //we couldn't connect for whatever reason
-                        showConnectionFailedDialog();
-                    }
-                });
+                connectToDevice(mDeviceInfo);
             }
         });
         mActivity = UIHelpers.getBaseActivity(this);
@@ -88,65 +66,30 @@ public class DeviceListFragment extends Fragment {
         }
     }
 
-    private void openDeviceMenu() {
-        FragmentOpener op = UIHelpers.findFragmentOpener(DeviceListFragment.this);
-        if (op != null)
-            op.openDeviceMenu();
+    @Override
+    public void onStart() {
+        super.onStart();
     }
 
-    private void connectToDevice(DeviceInfoProto.DeviceInfo deviceInfo, UIHelpers.OnDeviceConnected listener) {
-        if (mActivity == null || mActivity.getService() == null) {
-            listener.onDeviceConnectFailed();
-        }
-        mActivity.getService().startNetwork(deviceInfo);
-    }
-
-    private void stopDiscoveryService() {
-        if (mActivity != null) {
-            if (mActivity.getService().isDiscoveryActive())
-                mActivity.getService().stopDiscovery();
-        }
-    }
-
-    private void nameDevice(final UIHelpers.OnDeviceNamedListener listener) {
-        assert (listener != null);
-        AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
-        builder.setTitle("Name this device");
-        final EditText input = new EditText(getActivity());
-        input.setInputType(InputType.TYPE_CLASS_TEXT);
-        builder.setView(input);
-
-        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                String name = input.getText().toString();
-                if (name.length() > 0)
-                    listener.onDeviceNamed(name);
-                dialog.dismiss();
-            }
-        });
-        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                dialog.cancel();
-            }
-        });
-
-        builder.show();
+    @Override
+    public void onStop() {
+        super.onStop();
+        if (mActivity != null && mActivity.getService() != null)
+            mActivity.getService().removeMessageHandler(mMessageHandler);
     }
 
     private void createMessageHandler() {
         mMessageHandler = new ControllerService.OnMessage() {
             @Override
-            public void onMessage(Message msg) {
+            public void onMessage(Message msg, MessageProto.Message data) {
                 switch (msg.what)
                 {
                     case ControllerService.MESSAGE_DISCOVERY:
-                        byte [] data = msg.getData().getByteArray(ControllerService.MESSAGE_DATA_NAME_KEY);
-                        if (data == null)
+                        byte [] serviceData = msg.getData().getByteArray(ControllerService.MESSAGE_DATA_NAME_KEY);
+                        if (serviceData == null)
                             return;
                         try {
-                            DeviceInfoProto.DeviceInfo disc = DeviceInfoProto.DeviceInfo.parseFrom(data);
+                            DeviceInfoProto.DeviceInfo disc = DeviceInfoProto.DeviceInfo.parseFrom(serviceData);
                             mAdapter.addDevice(disc);
                             mAdapter.notifyDataSetChanged();
                         } catch (InvalidProtocolBufferException e) {
@@ -156,7 +99,10 @@ public class DeviceListFragment extends Fragment {
                         }
                         break;
                     case ControllerService.MESSAGE_CONNECTION_FAILED:
-                        showConnectionFailedDialog();
+                        onDeviceConnectFailed();
+                        break;
+                    case ControllerService.MESSAGE_CONNECTION_SUCCESS:
+                        onDeviceConnected();
                         break;
                     case ControllerService.MESSAGE_CONNECTION_DISCONNECT:
                         UIHelpers.showDisconnectDialog(getActivity(), msg.getData().getString(ControllerService.MESSAGE_DISCONNECT_MESSAGE_KEY, ""), new DialogInterface.OnDismissListener() {
@@ -171,6 +117,28 @@ public class DeviceListFragment extends Fragment {
                 }
             }
         };
+    }
+
+    private void connectToDevice(DeviceInfoProto.DeviceInfo deviceInfo) {
+        if (mActivity == null || mActivity.getService() == null) {
+            onDeviceConnectFailed();
+        }
+        mActivity.getService().startNetwork(deviceInfo);
+    }
+
+    private void openDeviceMenu() {
+        FragmentOpener op = UIHelpers.findFragmentOpener(DeviceListFragment.this);
+        if (op != null) {
+            op.openDeviceMenu();
+        }
+    }
+
+
+    private void stopDiscoveryService() {
+        if (mActivity != null) {
+            if (mActivity.getService().isDiscoveryActive())
+                mActivity.getService().stopDiscovery();
+        }
     }
 
     private void showConnectionFailedDialog() {
@@ -188,10 +156,36 @@ public class DeviceListFragment extends Fragment {
         builder.show();
     }
 
-    @Nullable
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        mRootView = inflater.inflate(R.layout.cb_device_list, container, false);
-        return mRootView;
+    public void onDeviceConnected() {
+        stopDiscoveryService();
+        if (!mDeviceInfo.hasName()) { //it doesn't have a name, allow a name.
+            UIHelpers.textEntry(getActivity(), "Name this device", new UIHelpers.OnDeviceTextEntry() {
+                @Override
+                public void onTextEntry(String name) { //the device is named, lets push that name to the server
+                    mDeviceInfo = mDeviceInfo.toBuilder().setName(name).build();
+                    InfoSetProto.InfoSet info = InfoSetProto.InfoSet.newBuilder().setName(name).build();
+                    MessageProto.Message msg = MessageProto.Message.newBuilder().setInfoSet(info).build();
+                    if (mActivity != null && mActivity.getService() != null) {
+                        mActivity.getService().sendNetworkMessage(msg);
+                        openDeviceMenu();
+                    }
+                }
+
+                @Override
+                public void onCancelled() {
+                    if (mActivity != null && mActivity.getService() != null) {
+                        mActivity.getService().disconnectNetwork();
+                    }
+                }
+            });
+            return;
+        }
+        openDeviceMenu();
+    }
+
+    @Override
+    public void onDeviceConnectFailed() {
+        showConnectionFailedDialog();
     }
 }
