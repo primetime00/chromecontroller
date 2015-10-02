@@ -1,5 +1,6 @@
 #include "AvahiServiceFile.h"
 #include "boost/regex.hpp"
+#include "boost/algorithm/string.hpp"
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -34,7 +35,7 @@ namespace avahi {
 		f.open(fname);
 		if (!f.is_open())
 			return false;
-		std::string data(std::istreambuf_iterator<char>(f), 
+		std::string data(std::istreambuf_iterator<char>(f),
 						 (std::istreambuf_iterator<char>()));
 		readServiceInfo(data, record);
 		f.close();
@@ -50,32 +51,36 @@ namespace avahi {
 		bool res;
 		if (record.has_name())
 		{
+            std::string name = record.name();
+            boost::algorithm::trim_right(name);
 			e = boost::regex("<txt-record>name=.*?</txt-record>");
 			res = boost::regex_search(data, e);
 			if (res)
 			{
-				ss << "<txt-record>name="<<record.name()<<"</txt-record>";
+				ss << "<txt-record>name="<<name<<"</txt-record>";
 				data = boost::regex_replace(data, e, ss.str());
 			}
 			else
 			{
-				ss << "  <txt-record>name="<<record.name()<<"</txt-record>\n </service>";
+				ss << "  <txt-record>name="<<name<<"</txt-record>\n </service>";
 				data = boost::regex_replace(data, s, ss.str());
 			}
 		}
 		ss.str(std::string());
 		if (record.has_location())
 		{
+            std::string location = record.location();
+            boost::algorithm::trim_right(location);
 			e = boost::regex("<txt-record>location=.*?</txt-record>");
 			res = boost::regex_search(data, e);
 			if (res)
 			{
-				ss << "<txt-record>location="<<record.location()<<"</txt-record>";
+				ss << "<txt-record>location="<<location<<"</txt-record>";
 				data = boost::regex_replace(data, e, ss.str());
 			}
 			else
 			{
-				ss << "  <txt-record>location="<<record.location()<<"</txt-record>\n </service>";
+				ss << "  <txt-record>location="<<location<<"</txt-record>\n </service>";
 				data = boost::regex_replace(data, s, ss.str());
 			}
 		}
@@ -85,7 +90,7 @@ namespace avahi {
 	{
 		std::ifstream f;
 		f.open(fname);
-		std::string data(std::istreambuf_iterator<char>(f), 
+		std::string data(std::istreambuf_iterator<char>(f),
 						 (std::istreambuf_iterator<char>()));
 		updateServiceInfo(data, record);
 		f.close();
@@ -171,7 +176,7 @@ namespace avahi {
 	{
 		std::string data;
 		createServiceInfo(data, record);
-		std::ofstream o; 
+		std::ofstream o;
 		o.open(fname, std::ofstream::out | std::ofstream::trunc);
 		o << data;
 		o.close();

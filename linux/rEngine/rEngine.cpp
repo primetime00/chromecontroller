@@ -158,6 +158,7 @@ void rEngine::onInfoRequest(rMessage data)
 	auto ret = mProcessor->createMessage();
 	ret->set_allocated_deviceinfo(populateDeviceInfo());
 	std::cout << "Got a device info request with id " << (data->has_id() ?  (int)data->inforequest().id() : 0) <<", sending device info" << std::endl;
+	std::cout << "Device name: " << ret->deviceinfo().name() << std::endl;
 	if (convertMessageToVectorData(ret))
 		mServer->GetConnection()->Send(mByteData);
 }
@@ -167,7 +168,7 @@ void rEngine::onInfoSet(rMessage data)
 	setDeviceInfomation(data->infoset());
 	auto ret = mProcessor->createMessage();
 	ret->set_allocated_deviceinfo(populateDeviceInfo());
-	std::cout << "Got a device info request with id " << (data->has_id() ?  (int)data->inforequest().id() : 0) <<", sending device info" << std::endl;
+	std::cout << "Got a device info set with id " << (data->has_id() ?  (int)data->inforequest().id() : 0) <<", sending device info" << std::endl;
 	if (convertMessageToVectorData(ret))
 		mServer->GetConnection()->Send(mByteData);
 }
@@ -185,13 +186,15 @@ void rEngine::onCommand(rMessage data)
 rProtos::DeviceInfo *rEngine::populateDeviceInfo()
 {
 	auto dev = new rProtos::DeviceInfo();
-	std::string macAddress;
+	std::string macAddress, ip;
 	//do some linux stuff here!
 	if (!avahi::readServiceInfoFile("/etc/avahi/services/remotecontrol.service", *dev))
 		return 0;
 
+    netinfo::getIfInfo(macAddress, ip);
+
 	//read ip address
-	dev->set_ip("192.168.1.138");
+	dev->set_ip(ip);
 
 /*	dev->set_ip("192.168.1.138");
 	dev->set_location("Bedroom");
@@ -204,11 +207,7 @@ rProtos::DeviceInfo *rEngine::populateDeviceInfo()
 
 void rEngine::setDeviceInfomation(const rProtos::InfoSet &info)
 {
-	//do some linux stuff here
-	std::string data = avahi::getFakeData();
-	avahi::updateServiceInfo(data, info);
-
-	//restart avahi here?
+	avahi::updateServiceInfoFile("/etc/avahi/services/remotecontrol.service", info);
 }
 
 void rEngine::testPing(unsigned int id)
