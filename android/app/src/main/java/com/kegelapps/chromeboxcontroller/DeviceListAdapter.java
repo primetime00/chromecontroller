@@ -63,7 +63,21 @@ public class DeviceListAdapter extends BaseAdapter {
         if (dev.hasLocation())
             ((TextView)v.findViewById(R.id.description_text)).setText(devices.get(position).getLocation());
         else
-            ((TextView)v.findViewById(R.id.description_text)).setText(devices.get(position).getMac());
+            ((TextView)v.findViewById(R.id.description_text)).setText(devices.get(position).getIp());
         return v;
+    }
+
+    public void removeItem(DeviceInfoProto.DeviceInfo dev) {
+        devices.remove(dev);
+    }
+
+    public DeviceInfoProto.DeviceInfo findDevice(DeviceInfoProto.DeviceInfo dev) {
+        int dev_ip = UIHelpers.convertIp(dev.getIp());
+        for (DeviceInfoProto.DeviceInfo current : devices) {
+            if (UIHelpers.convertIp(current.getIp()) == dev_ip) {
+                return current;
+            }
+        }
+        return null;
     }
 }

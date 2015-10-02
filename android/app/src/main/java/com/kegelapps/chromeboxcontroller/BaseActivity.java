@@ -31,6 +31,7 @@ public class BaseActivity extends AppCompatActivity
     private ControllerService mControllerService;
     private boolean mServiceBound = false;
     private Messenger mServiceMessenger;
+    private Storage mStorage;
 
     /**
      * Fragment managing the behaviors, interactions and presentation of the navigation drawer.
@@ -63,6 +64,8 @@ public class BaseActivity extends AppCompatActivity
                 .commit();
 
         mServiceMessenger = new Messenger(new ServiceMessageHandler());
+        mStorage = new Storage(this);
+        mStorage.loadUserDevices();
 
         startNetworkService();
 
@@ -206,5 +209,9 @@ public class BaseActivity extends AppCompatActivity
                 mControllerService.stopSelf();
             }
         }
+    }
+
+    public Storage getStorage() {
+        return mStorage;
     }
 }

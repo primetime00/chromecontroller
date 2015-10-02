@@ -21,6 +21,8 @@ import java.util.List;
  */
 public class ControllerService extends Service {
 
+    static final int SERVICE_PORT = 30015;
+
     static final int MESSAGE_START                  = 1;
     static final int MESSAGE_DISCOVERY              = 2;
     static final int MESSAGE_CONNECTION_SUCCESS     = 3;
@@ -132,7 +134,7 @@ public class ControllerService extends Service {
         sendUIMessage(uiMessage);
     }
 
-    private synchronized void storeDeviceInfo(DeviceInfoProto.DeviceInfo deviceInfo) {
+    public synchronized void storeDeviceInfo(DeviceInfoProto.DeviceInfo deviceInfo) {
         mCurrentDeviceInfo = DeviceInfoProto.DeviceInfo.newBuilder(deviceInfo).build();
     }
 

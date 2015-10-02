@@ -9,4 +9,5 @@ public interface FragmentOpener {
     void openFragment(Fragment frag, int where);
     void openDeviceList();
     void openDeviceMenu();
+    void openDeviceSettings();
 }

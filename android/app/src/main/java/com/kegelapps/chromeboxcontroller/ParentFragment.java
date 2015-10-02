@@ -16,6 +16,7 @@ public class ParentFragment extends Fragment implements FragmentOpener {
     private View mRootView;
     private DeviceListFragment mDeviceListFragment;
     private DeviceMenuFragment mDeviceMenuFragment;
+    private DeviceSettingsFragment mDeviceSettingsFragment;
 
     @Override
     public void onViewCreated(View view, Bundle savedInstanceState) {
@@ -29,6 +30,7 @@ public class ParentFragment extends Fragment implements FragmentOpener {
         mRootView = inflater.inflate(R.layout.fragment_parent, container, false);
         mDeviceListFragment = new DeviceListFragment();
         mDeviceMenuFragment = new DeviceMenuFragment();
+        mDeviceSettingsFragment = new DeviceSettingsFragment();
         return mRootView;
     }
 
@@ -51,5 +53,10 @@ public class ParentFragment extends Fragment implements FragmentOpener {
     @Override
     public void openDeviceMenu() {
         openFragment(mDeviceMenuFragment, R.id.parent_content);
+    }
+
+    @Override
+    public void openDeviceSettings() {
+        openFragment(mDeviceSettingsFragment, R.id.parent_content);
     }
 }
