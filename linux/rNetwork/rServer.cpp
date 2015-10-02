@@ -126,8 +126,10 @@ void rConnection::OnTimer(const boost::posix_time::time_duration & delta)
 void rConnection::OnError(const boost::system::error_code & error)
 {
 	global_stream_lock.lock();
-	std::cout << "rConnection had an error " << error << std::endl;
+	std::cout << "rConnection had an error: " << error << std::endl;
+	std::cout << "Disconnecting!" << std::endl;
 	global_stream_lock.unlock();
+	Disconnect();
 }
 
 void rConnection::OnDisconnect()
