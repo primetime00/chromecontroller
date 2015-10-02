@@ -14,3 +14,7 @@ message DeviceInfo {
 	optional int32 port = 7;
 	optional bool user_created = 8;
 }
+
+message DeviceInfoList {
+    repeated DeviceInfo devices = 1;
+}
