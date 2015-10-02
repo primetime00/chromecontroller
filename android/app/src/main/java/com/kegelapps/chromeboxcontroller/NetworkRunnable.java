@@ -101,6 +101,8 @@ public class NetworkRunnable implements Runnable {
         });
         mPingEngine.start(1000);
 
+        mListener.onConnectionSuccess();
+
 
         //enter main loop
         Looper.loop();
@@ -147,6 +149,7 @@ public class NetworkRunnable implements Runnable {
 
     private void sendMessagePacket(MessageProto.Message msg) {
         assert (msg != null);
+        msg = msg.toBuilder().setId(getNetworkId()).build();
         ByteBuffer data = ByteBuffer.allocate(msg.getSerializedSize() + 4);
         data.order(ByteOrder.LITTLE_ENDIAN);
         data.putInt(msg.getSerializedSize());
@@ -160,7 +163,7 @@ public class NetworkRunnable implements Runnable {
 
     private MessageProto.Message createPingMessage(int id) {
         PingProto.Ping p = PingProto.Ping.newBuilder().setId(id).build();
-        MessageProto.Message m = MessageProto.Message.newBuilder().setPing(p).setId(getNetworkId()).build();
+        MessageProto.Message m = MessageProto.Message.newBuilder().setPing(p).build();
         return m;
     }
 
@@ -169,9 +172,7 @@ public class NetworkRunnable implements Runnable {
     }
 
     private void processMessage(MessageProto.Message msg) {
-        if (msg.hasCommandList()) {
-            Log.d("NetworkRunnable", "I received a list of commands with " + msg.getCommandList().getScriptsCount() + " commands");
-        }
+        mListener.onReceivedMessage(msg);
     }
 
     public void setConnection(DeviceInfoProto.DeviceInfo dev) {
@@ -214,7 +215,7 @@ public class NetworkRunnable implements Runnable {
         }
     }
 
-    private void closeNetwork() {
+    public void closeNetwork() {
         Message m = Message.obtain();
         m.what = NETWORK_THREAD_EXIT;
         mNetworkHandler.sendMessage(m);
