@@ -23,13 +23,15 @@ public class ControllerService extends Service {
 
     static final int SERVICE_PORT = 30015;
 
+    static final int MESSAGE_BOUND                  = 0;
     static final int MESSAGE_START                  = 1;
     static final int MESSAGE_DISCOVERY              = 2;
-    static final int MESSAGE_CONNECTION_SUCCESS     = 3;
-    static final int MESSAGE_CONNECTION_FAILED      = 4;
-    static final int MESSAGE_CONNECTION_DISCONNECT  = 5;
-    static final int MESSAGE_RECEIVED_MESSAGE       = 6;
-    static final int MESSAGE_DISCONNECT_NETWORK     = 7;
+    static final int MESSAGE_DISCOVERY_CACHE        = 3;
+    static final int MESSAGE_CONNECTION_SUCCESS     = 4;
+    static final int MESSAGE_CONNECTION_FAILED      = 5;
+    static final int MESSAGE_CONNECTION_DISCONNECT  = 6;
+    static final int MESSAGE_RECEIVED_MESSAGE       = 7;
+    static final int MESSAGE_DISCONNECT_NETWORK     = 8;
 
 
 
@@ -38,7 +40,7 @@ public class ControllerService extends Service {
 
     private final IBinder mBinder = new LocalBinder();
     private boolean mRunning = false;
-    private Thread mRunningThread;
+    private Thread mServiceDiscoveryThread;
     private ServiceDiscoveryRunnable mDiscoveryRunnable;
     private NetworkRunnable mNetworkRunnable;
     private Messenger mMessenger;
@@ -53,6 +55,7 @@ public class ControllerService extends Service {
     }
     public interface OnServiceDiscovery {
         void onDiscovery(DeviceInfoProto.DeviceInfo data);
+        void onCache(DeviceInfoProto.DeviceInfoList devices);
     }
 
     public interface OnConnection {
@@ -73,11 +76,22 @@ public class ControllerService extends Service {
         mDiscoveryRunnable = new ServiceDiscoveryRunnable(getApplicationContext(), new OnServiceDiscovery() {
             @Override
             public void onDiscovery(DeviceInfoProto.DeviceInfo data) {
-                Log.d("Service", "I got item from thread " + Thread.currentThread());
+                Log.d("Service", "I got a service device " + data.getIp());
                 Message serviceMsg = Message.obtain();
                 serviceMsg.what = MESSAGE_DISCOVERY;
                 Bundle b = new Bundle();
                 b.putByteArray(MESSAGE_DATA_NAME_KEY, data.toByteArray());
+                serviceMsg.setData(b);
+                sendUIMessage(serviceMsg);
+            }
+
+            @Override
+            public void onCache(DeviceInfoProto.DeviceInfoList devices) {
+                Log.d("Service", "I got a service cache of " + devices.getDevicesCount() + " devices");
+                Message serviceMsg = Message.obtain();
+                serviceMsg.what = MESSAGE_DISCOVERY_CACHE;
+                Bundle b = new Bundle();
+                b.putByteArray(MESSAGE_DATA_NAME_KEY, devices.toByteArray());
                 serviceMsg.setData(b);
                 sendUIMessage(serviceMsg);
             }
@@ -170,26 +184,32 @@ public class ControllerService extends Service {
     }
 
     public void startDiscovery() {
-        mRunningThread = new Thread(mDiscoveryRunnable);
-        mRunningThread.start();
+        if (mServiceDiscoveryThread != null) {//we've either run a scan or currently running one
+            mDiscoveryRunnable.passCachedValues();
+        }
+        else {
+            mServiceDiscoveryThread = new Thread(mDiscoveryRunnable);
+            mServiceDiscoveryThread.start();
+        }
     }
+
     public void stopDiscovery() {
         if (mDiscoveryRunnable == null)
             return;
-        if (mRunningThread != null && mRunningThread.isAlive()) {
+        if (mServiceDiscoveryThread != null && mServiceDiscoveryThread.isAlive()) {
             try {
-                mRunningThread.join();
+                mServiceDiscoveryThread.join();
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
-        mRunningThread = new Thread(new Runnable() {
+        mServiceDiscoveryThread = new Thread(new Runnable() {
             @Override
             public void run() {
                 mDiscoveryRunnable.stop();
             }
         });
-        mRunningThread.start();
+        mServiceDiscoveryThread.start();
 
     }
 
@@ -227,5 +247,6 @@ public class ControllerService extends Service {
             return ControllerService.this;
         }
     }
+
 }
 

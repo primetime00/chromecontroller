@@ -1,7 +1,11 @@
 package com.kegelapps.chromeboxcontroller;
 
+import android.content.ComponentName;
+import android.content.Context;
 import android.content.DialogInterface;
+import android.content.ServiceConnection;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.os.Message;
 import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
@@ -25,7 +29,7 @@ import com.kegelapps.chromeboxcontroller.proto.MessageProto;
 /**
  * Created by Ryan on 9/5/2015.
  */
-public class DeviceListFragment extends Fragment implements UIHelpers.OnDeviceConnected{
+public class DeviceListFragment extends Fragment implements UIHelpers.OnDeviceConnected {
 
     private View mRootView;
     private ListView mDeviceList;
@@ -77,9 +81,15 @@ public class DeviceListFragment extends Fragment implements UIHelpers.OnDeviceCo
         });
 
         if (mActivity != null) {
-            mActivity.getService().addMessageHandler(mMessageHandler);
-            mActivity.getService().startDiscovery();
+            mActivity.runServiceItem(new Runnable() {
+                @Override
+                public void run() {
+                    mActivity.getService().addMessageHandler(mMessageHandler);
+                    mActivity.getService().startDiscovery();
+                }
+            });
         }
+
     }
 
     private void loadUserDevices() {
@@ -98,8 +108,14 @@ public class DeviceListFragment extends Fragment implements UIHelpers.OnDeviceCo
     @Override
     public void onStop() {
         super.onStop();
-        if (mActivity != null && mActivity.getService() != null)
-            mActivity.getService().removeMessageHandler(mMessageHandler);
+        if (mActivity != null) {
+            mActivity.runServiceItem(new Runnable() {
+                @Override
+                public void run() {
+                    mActivity.getService().removeMessageHandler(mMessageHandler);
+                }
+            });
+        }
     }
 
     @Override
@@ -209,7 +225,6 @@ public class DeviceListFragment extends Fragment implements UIHelpers.OnDeviceCo
         }
     }
 
-
     private void stopDiscoveryService() {
         if (mActivity != null) {
             if (mActivity.getService().isDiscoveryActive())
@@ -266,7 +281,6 @@ public class DeviceListFragment extends Fragment implements UIHelpers.OnDeviceCo
         }
         openDeviceMenu();
     }
-
     @Override
     public void onDeviceConnectFailed() {
         showConnectionFailedDialog();
