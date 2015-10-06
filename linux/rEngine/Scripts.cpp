@@ -58,8 +58,7 @@ void rScripts::readScripts()
                         boost::algorithm::trim_left(data);
                         cmd->set_script(data);
                         auto script = scripts->add_scripts();
-                        script->mutable_info()->set_name(cmd->info().name());
-                        script->mutable_info()->set_output_type(cmd->info().output_type());
+                        script->mutable_info()->CopyFrom(cmd->info());
                         script->set_script(cmd->script());
                     }
                 }

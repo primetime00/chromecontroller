@@ -12,7 +12,7 @@ message ScriptInfo {
     optional int32 return_value = 6;
     optional bool run_failed = 7 [default = false];
     optional string description = 8;
-    optional bool visible = 9 [default = false];
+    optional bool visible = 9 [default = true];
 }
 
 message ScriptCommand {
