@@ -32,6 +32,9 @@ public class ServiceDiscoveryRunnable implements Runnable {
     private Timer mTimeout;
     private boolean mActive;
     private ControllerService.OnServiceDiscovery discovery;
+    private DeviceInfoProto.DeviceInfoList mDeviceCache;
+    private Object mCacheLock = new Object();
+    private boolean mComplete;
 
     private int timeout = 60000;
     private Context context;
@@ -39,6 +42,8 @@ public class ServiceDiscoveryRunnable implements Runnable {
     public ServiceDiscoveryRunnable(Context context, ControllerService.OnServiceDiscovery disc) {
         this.context = context;
         this.discovery = disc;
+        mDeviceCache = DeviceInfoProto.DeviceInfoList.getDefaultInstance();
+        mComplete = false;
     }
 
     @Override
@@ -49,6 +54,7 @@ public class ServiceDiscoveryRunnable implements Runnable {
         lock = wifi.createMulticastLock(getClass().getSimpleName());
         lock.setReferenceCounted(false);
         mActive = true;
+        mComplete = false;
 
         try {
             InetAddress addr = getLocalIpAddress();
@@ -100,8 +106,7 @@ public class ServiceDiscoveryRunnable implements Runnable {
 
                     if (mac != null) {
                         res = builder.build();
-                        if (discovery != null)
-                            discovery.onDiscovery(res);
+                        processDevice(res);
                     }
                 }
             };
@@ -115,14 +120,41 @@ public class ServiceDiscoveryRunnable implements Runnable {
             @Override
             public void run() {
                 stop();
+                mComplete = true;
             }
         }, 10000);
+
+        //just a test!!!!
+        new Timer().schedule(new TimerTask() {
+            @Override
+            public void run() {
+                DeviceInfoProto.DeviceInfo dev = DeviceInfoProto.DeviceInfo.newBuilder().setName("Test").setIp("192.168.1.55").setMac("aa:bb:cc:dd:ee:ff").setPort(30015).build();
+                processDevice(dev);
+            }
+        }, 6000);
+
+    }
+
+    private void processDevice(DeviceInfoProto.DeviceInfo dev) {
+        int dev_ip = UIHelpers.convertIp(dev.getIp());
+        for (DeviceInfoProto.DeviceInfo current : mDeviceCache.getDevicesList()) {
+            int current_ip = UIHelpers.convertIp(current.getIp());
+            if (dev_ip == current_ip) //we already have this device
+                continue;
+        }
+        synchronized (mCacheLock) {
+            mDeviceCache = mDeviceCache.toBuilder().addDevices(dev).build();
+        }
+        if (discovery != null)
+            discovery.onDiscovery(dev);
     }
 
     public synchronized void stop() {
         //Unregister services
-        if (jmdns == null)
+        if (jmdns == null) {
+            mActive = false;
             return;
+        }
         if (mTimeout != null)
             mTimeout.cancel();
         Log.i("ServiceDiscoveryRun", "Stopping mDNS!");
@@ -142,8 +174,8 @@ public class ServiceDiscoveryRunnable implements Runnable {
         //Release the lock
         if (lock != null)
             lock.release();
-        mActive = false;
         Log.i("ServiceDiscoveryRun", "mDNS Stopped!");
+        mActive = false;
     }
 
     private InetAddress getLocalIpAddress() {
@@ -160,7 +192,19 @@ public class ServiceDiscoveryRunnable implements Runnable {
         return address;
     }
 
-    public synchronized boolean isActive() {
+    public boolean isActive() {
         return mActive;
+    }
+
+    public boolean isComplete() { return mComplete;}
+
+    public void passCachedValues() {
+        if (discovery != null) {
+            DeviceInfoProto.DeviceInfoList cache;
+            synchronized (mCacheLock) {
+                cache = DeviceInfoProto.DeviceInfoList.newBuilder(mDeviceCache).build();
+            }
+            discovery.onCache(cache);
+        }
     }
 }

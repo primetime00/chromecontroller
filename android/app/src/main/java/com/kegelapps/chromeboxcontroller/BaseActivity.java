@@ -9,11 +9,13 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
+import android.os.RemoteException;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.app.ActionBar;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -24,13 +26,18 @@ import android.support.v4.widget.DrawerLayout;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.kegelapps.chromeboxcontroller.proto.MessageProto;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class BaseActivity extends AppCompatActivity
         implements NavigationDrawerFragment.NavigationDrawerCallbacks {
 
     private ParentFragment mParentFragment;
     private ControllerService mControllerService;
-    private boolean mServiceBound = false;
+    private boolean mServiceBound;
     private Messenger mServiceMessenger;
+    private Storage mStorage;
+    private List<Runnable> mBoundRunnableList;
 
     /**
      * Fragment managing the behaviors, interactions and presentation of the navigation drawer.
@@ -45,8 +52,14 @@ public class BaseActivity extends AppCompatActivity
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setServiceBound(false);
         mParentFragment = new ParentFragment();
+        mBoundRunnableList = new ArrayList<>();
         setContentView(R.layout.activity_base);
+
+        mServiceMessenger = new Messenger(new ServiceMessageHandler());
+        startNetworkService();
+
 
         mNavigationDrawerFragment = (NavigationDrawerFragment)
                 getSupportFragmentManager().findFragmentById(R.id.navigation_drawer);
@@ -57,21 +70,24 @@ public class BaseActivity extends AppCompatActivity
                 R.id.navigation_drawer,
                 (DrawerLayout) findViewById(R.id.drawer_layout));
 
-        getSupportFragmentManager().beginTransaction()
-                .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out)
-                .replace(R.id.container, mParentFragment)
-                .commit();
+        Fragment f = getSupportFragmentManager().findFragmentById(R.id.container);
+        if (f == null) {
+            getSupportFragmentManager().beginTransaction()
+                    .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out)
+                    .replace(R.id.container, mParentFragment)
+                    .commit();
+        }
 
-        mServiceMessenger = new Messenger(new ServiceMessageHandler());
+        mStorage = new Storage(this);
+        mStorage.loadUserDevices();
 
-        startNetworkService();
 
     }
 
     private void startNetworkService() {
         Intent i= new Intent(this, ControllerService.class);
         i.putExtra("MESSENGER", mServiceMessenger);
-        startService(i);
+        getApplicationContext().startService(i);
     }
 
     @Override
@@ -119,21 +135,33 @@ public class BaseActivity extends AppCompatActivity
     }
 
     @Override
+    protected void onPause() {
+        super.onPause();
+        if (isServiceBound()) {
+            getApplicationContext().unbindService(mConnection);
+            setServiceBound(false);
+            mServiceMessenger = null;
+        }
+
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Intent i = new Intent(this, ControllerService.class);
+        i.putExtra("MESSENGER", mServiceMessenger);
+        getApplicationContext().bindService(i, mConnection, Context.BIND_AUTO_CREATE);
+    }
+
+    @Override
     protected void onStop() {
         super.onStop();
-        if (mServiceBound) {
-            unbindService(mConnection);
-            mServiceBound = false;
-        }
 
     }
 
     @Override
     protected void onStart() {
         super.onStart();
-        Intent i = new Intent(this, ControllerService.class);
-        i.putExtra("MESSENGER", mServiceMessenger);
-        bindService(i, mConnection, Context.BIND_AUTO_CREATE);
     }
 
     @Override
@@ -163,12 +191,17 @@ public class BaseActivity extends AppCompatActivity
             // We've bound to LocalService, cast the IBinder and get LocalService instance
             ControllerService.LocalBinder binder = (ControllerService.LocalBinder) service;
             mControllerService = binder.getService();
-            mServiceBound = true;
+            setServiceBound(true);
+            for (Runnable r : mBoundRunnableList) {
+                r.run();
+            }
+            mBoundRunnableList.clear();
         }
 
         @Override
         public void onServiceDisconnected(ComponentName arg0) {
-            mServiceBound = false;
+            setServiceBound(false);
+            mControllerService = null;
         }
     };
 
@@ -188,7 +221,7 @@ public class BaseActivity extends AppCompatActivity
                         return;
                     }
             }
-            if (mControllerService != null && mServiceBound) {
+            if (mControllerService != null) {
                 for (ControllerService.OnMessage handler : mControllerService.getMessageHandlers()) {
                     handler.onMessage(msg, data);
                 }
@@ -199,12 +232,33 @@ public class BaseActivity extends AppCompatActivity
     @Override
     public void onBackPressed() {
         super.onBackPressed();
-        if (mServiceBound) {
+        if (isServiceBound()) {
             if (mControllerService != null) {
                 if (mControllerService.isDiscoveryActive())
                     mControllerService.stopDiscovery();
                 mControllerService.stopSelf();
             }
         }
+    }
+
+    public Storage getStorage() {
+        return mStorage;
+    }
+
+    void runServiceItem(Runnable r) {
+        if (isServiceBound())
+            r.run();
+        else
+            mBoundRunnableList.add(r);
+    }
+
+    public boolean isServiceBound() {
+        Log.d("Service", "Service bound read as " + mServiceBound);
+        return mServiceBound;
+    }
+
+    public void setServiceBound(boolean bound) {
+        Log.d("Service", "Service bound set to " + bound);
+        this.mServiceBound = bound;
     }
 }

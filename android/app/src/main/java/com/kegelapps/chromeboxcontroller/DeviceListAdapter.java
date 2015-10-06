@@ -18,34 +18,35 @@ import java.util.List;
  */
 public class DeviceListAdapter extends BaseAdapter {
     private Context context;
-    private List<DeviceInfoProto.DeviceInfo> devices;
+    //private List<DeviceInfoProto.DeviceInfo> devices;
+    private DeviceInfoProto.DeviceInfoList devices;
 
     public DeviceListAdapter(Context context) {
         this.context = context;
-        devices = new ArrayList<DeviceInfoProto.DeviceInfo>();
+        devices = DeviceInfoProto.DeviceInfoList.getDefaultInstance();
     }
 
     public void addDevice(DeviceInfoProto.DeviceInfo dev) {
-        for (DeviceInfoProto.DeviceInfo d : devices) {
+        for (DeviceInfoProto.DeviceInfo d : devices.getDevicesList()) {
             if (d.getIp().equals(dev.getIp()))
                 return;
         }
-        devices.add(dev);
+        devices = devices.toBuilder().addDevices(dev).build();
     }
 
     @Override
     public int getCount() {
-        return devices.size();
+        return devices.getDevicesCount();
     }
 
     @Override
     public Object getItem(int position) {
-        return devices.get(position);
+        return devices.getDevices(position);
     }
 
     @Override
     public long getItemId(int position) {
-        return devices.get(position).getId();
+        return devices.getDevices(position).getId();
     }
 
     @Override
@@ -55,15 +56,31 @@ public class DeviceListAdapter extends BaseAdapter {
             LayoutInflater inflater = (LayoutInflater)context.getSystemService (Context.LAYOUT_INFLATER_SERVICE);
             v = inflater.inflate(R.layout.cb_device_list_item, null);
         }
-        DeviceInfoProto.DeviceInfo dev = devices.get(position);
+        DeviceInfoProto.DeviceInfo dev = (DeviceInfoProto.DeviceInfo) getItem(position);
         if (dev.hasName())
             ((TextView) v.findViewById(R.id.title_text)).setText(dev.getName());
         else
             ((TextView) v.findViewById(R.id.title_text)).setText(dev.getIp());
         if (dev.hasLocation())
-            ((TextView)v.findViewById(R.id.description_text)).setText(devices.get(position).getLocation());
+            ((TextView)v.findViewById(R.id.description_text)).setText(dev.getLocation());
         else
-            ((TextView)v.findViewById(R.id.description_text)).setText(devices.get(position).getMac());
+            ((TextView)v.findViewById(R.id.description_text)).setText(dev.getIp());
         return v;
+    }
+
+    public void removeItem(DeviceInfoProto.DeviceInfo dev) {
+        int pos = devices.getDevicesList().indexOf(dev);
+        if (pos > -1)
+            devices = devices.toBuilder().removeDevices(pos).build();
+    }
+
+    public DeviceInfoProto.DeviceInfo findDevice(DeviceInfoProto.DeviceInfo dev) {
+        int dev_ip = UIHelpers.convertIp(dev.getIp());
+        for (DeviceInfoProto.DeviceInfo current : devices.getDevicesList()) {
+            if (UIHelpers.convertIp(current.getIp()) == dev_ip) {
+                return current;
+            }
+        }
+        return null;
     }
 }

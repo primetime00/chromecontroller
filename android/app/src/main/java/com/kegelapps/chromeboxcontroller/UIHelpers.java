@@ -7,6 +7,11 @@ import android.support.v7.app.AlertDialog;
 import android.text.InputType;
 import android.widget.EditText;
 
+import com.kegelapps.chromeboxcontroller.proto.DeviceInfoProto;
+
+import java.io.FileOutputStream;
+import java.util.regex.Pattern;
+
 /**
  * Created by Ryan on 9/6/2015.
  */
@@ -91,7 +96,7 @@ public class UIHelpers {
         builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                String name = input.getText().toString();
+                String name = input.getText().toString().trim();
                 if (name.length() > 0)
                     listener.onTextEntry(name);
                 dialog.dismiss();
@@ -106,5 +111,18 @@ public class UIHelpers {
         });
 
         builder.show();
+    }
+
+    static public int convertIp(String ipStr) {
+        int result = 0;
+
+        // iterate over each octet
+        for(String part : ipStr.split(Pattern.quote("."))) {
+            // shift the previously parsed bits over by 1 byte
+            result = result << 8;
+            // set the low order bits to the current octet
+            result |= Integer.parseInt(part);
+        }
+        return result;
     }
 }

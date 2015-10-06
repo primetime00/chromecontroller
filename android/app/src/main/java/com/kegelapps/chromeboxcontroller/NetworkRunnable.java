@@ -177,7 +177,10 @@ public class NetworkRunnable implements Runnable {
 
     public void setConnection(DeviceInfoProto.DeviceInfo dev) {
         mIP = dev.getIp();
-        mPort = dev.getPort();
+        if (!dev.hasPort())
+            mPort = ControllerService.SERVICE_PORT;
+        else
+            mPort = dev.getPort();
     }
 
     public void recvFunction() {
