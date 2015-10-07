@@ -1,0 +1,15 @@
+info {
+	name: "Reboot"
+	output_type: "none"
+	visible: true
+	choice {
+		title: "Do you want to reboot?"
+		option: "Yes"
+		option: "No"
+	}
+}
+#script
+#!/bin/sh
+if [ $1 = "Yes" ]; then
+	echo "Rebooting"
+fi

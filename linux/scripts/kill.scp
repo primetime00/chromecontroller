@@ -1,0 +1,8 @@
+info {
+	name: "Kill Process"
+	output_type: "none"
+	visible: false
+}
+#script
+#!/bin/sh
+kill -s 9 $1

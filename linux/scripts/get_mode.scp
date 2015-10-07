@@ -1,0 +1,11 @@
+info {
+	name: "Get Current Mode"
+	output_type: "text"
+	visible: true
+}
+#script
+#!/bin/sh
+USER=$(dbus-send --print-reply=literal --system --dest=org.freedesktop.Accounts /org/freedesktop/Accounts org.freedesktop.Accounts.FindUserById int64:1000)
+res=$(dbus-send --system --print-reply --dest=org.freedesktop.Accounts $USER org.freedesktop.DBus.Properties.Get string:"org.freedesktop.Accounts.User" string:"XSession" > /tmp/remote_output)
+cat /tmp/remote_output | awk '/variant/ { gsub("\"", "");  print $3 }'
+exit $res

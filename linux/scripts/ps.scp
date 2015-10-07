@@ -1,0 +1,16 @@
+info {
+	name: "Process List"
+	output_type: "list"
+	associated_command: "Kill Process"
+	visible: true
+}
+#script
+#!/bin/sh
+ps -ec --no-heading -F > /tmp/remote_output
+res=$?
+if [ $res != 0 ]; then
+	rm -f /tmp/remote_output
+	exit $res
+fi
+cat /tmp/remote_output | awk '$2 ~ /^[0-9]/ && $12 !~ /RemoteServer/ {print $2 " " $12}'
+exit $res
