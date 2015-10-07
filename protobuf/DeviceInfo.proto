@@ -12,7 +12,7 @@ message DeviceInfo {
 	optional string name = 5;
 	optional string mode = 6;
 	optional int32 port = 7;
-	optional bool user_created = 8;
+	optional bool user_created = 8 [default = true];
 }
 
 message DeviceInfoList {
