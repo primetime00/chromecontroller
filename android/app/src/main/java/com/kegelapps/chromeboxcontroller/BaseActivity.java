@@ -1,27 +1,19 @@
 package com.kegelapps.chromeboxcontroller;
 
-import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
-import android.os.RemoteException;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.app.ActionBar;
 import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentManager;
-import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
-import android.view.ViewGroup;
-import android.support.v4.widget.DrawerLayout;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.kegelapps.chromeboxcontroller.proto.MessageProto;
@@ -29,8 +21,7 @@ import com.kegelapps.chromeboxcontroller.proto.MessageProto;
 import java.util.ArrayList;
 import java.util.List;
 
-public class BaseActivity extends AppCompatActivity
-        implements NavigationDrawerFragment.NavigationDrawerCallbacks {
+public class BaseActivity extends AppCompatActivity {
 
     private ParentFragment mParentFragment;
     private ControllerService mControllerService;
@@ -39,38 +30,26 @@ public class BaseActivity extends AppCompatActivity
     private Storage mStorage;
     private List<Runnable> mBoundRunnableList;
 
-    /**
-     * Fragment managing the behaviors, interactions and presentation of the navigation drawer.
-     */
-    private NavigationDrawerFragment mNavigationDrawerFragment;
 
-    /**
-     * Used to store the last screen title. For use in {@link #restoreActionBar()}.
-     */
     private CharSequence mTitle;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setServiceBound(false);
-        mParentFragment = new ParentFragment();
+        Fragment f = getSupportFragmentManager().findFragmentById(R.id.container);
+        if (f!=null)
+            mParentFragment = (ParentFragment) f;
+        else
+            mParentFragment = new ParentFragment();
         mBoundRunnableList = new ArrayList<>();
         setContentView(R.layout.activity_base);
 
         mServiceMessenger = new Messenger(new ServiceMessageHandler());
         startNetworkService();
 
-
-        mNavigationDrawerFragment = (NavigationDrawerFragment)
-                getSupportFragmentManager().findFragmentById(R.id.navigation_drawer);
         mTitle = getTitle();
 
-        // Set up the drawer.
-        mNavigationDrawerFragment.setUp(
-                R.id.navigation_drawer,
-                (DrawerLayout) findViewById(R.id.drawer_layout));
-
-        Fragment f = getSupportFragmentManager().findFragmentById(R.id.container);
         if (f == null) {
             getSupportFragmentManager().beginTransaction()
                     .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out)
@@ -84,6 +63,8 @@ public class BaseActivity extends AppCompatActivity
 
     }
 
+
+
     private void startNetworkService() {
         Intent i= new Intent(this, ControllerService.class);
         i.putExtra("MESSENGER", mServiceMessenger);
@@ -91,46 +72,8 @@ public class BaseActivity extends AppCompatActivity
     }
 
     @Override
-    public void onNavigationDrawerItemSelected(int position) {
-        // update the main content by replacing fragments
-        FragmentManager fragmentManager = getSupportFragmentManager();
-        //if (position == 0)
-        //    mParentFragment.openDeviceList();
-    }
-
-
-    public void onSectionAttached(int number) {
-        switch (number) {
-            case 1:
-                mTitle = "Device List";
-                break;
-            case 2:
-                mTitle = getString(R.string.title_section2);
-                break;
-            case 3:
-                mTitle = getString(R.string.title_section3);
-                break;
-        }
-    }
-
-    public void restoreActionBar() {
-        ActionBar actionBar = getSupportActionBar();
-        actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_STANDARD);
-        actionBar.setDisplayShowTitleEnabled(true);
-        actionBar.setTitle(mTitle);
-    }
-
-
-    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        if (!mNavigationDrawerFragment.isDrawerOpen()) {
-            // Only show items in the action bar relevant to this screen
-            // if the drawer is not showing. Otherwise, let the drawer
-            // decide what to show in the action bar.
-            getMenuInflater().inflate(R.menu.menu_base, menu);
-            restoreActionBar();
-            return true;
-        }
+        getMenuInflater().inflate(R.menu.menu_base, menu);
         return super.onCreateOptionsMenu(menu);
     }
 
@@ -216,6 +159,7 @@ public class BaseActivity extends AppCompatActivity
                 case ControllerService.MESSAGE_RECEIVED_MESSAGE:
                     try {
                         data = MessageProto.Message.parseFrom(msg.getData().getByteArray(ControllerService.MESSAGE_DATA_NAME_KEY));
+                        Log.d("BaseActivity", "Received some data " + data.toString());
                     } catch (InvalidProtocolBufferException e) {
                         e.printStackTrace();
                         return;
@@ -231,6 +175,11 @@ public class BaseActivity extends AppCompatActivity
 
     @Override
     public void onBackPressed() {
+        boolean res = true;
+        if (mParentFragment != null)
+            res = mParentFragment.onBackPressed();
+        if (res == false)
+            return;
         super.onBackPressed();
         if (isServiceBound()) {
             if (mControllerService != null) {

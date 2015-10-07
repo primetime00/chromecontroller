@@ -67,21 +67,20 @@ public class DeviceInfoFragment extends Fragment {
         });
 
         createMessageHandler();
-        if (mActivity != null && mActivity.getService() != null && mActivity.getService().getDeviceInfo() != null) {
-            Log.d("DeviceInfoFragment", "Grabbing device info stored in service");
-            processDeviceInfo(mActivity.getService().getDeviceInfo());
-        }
-        new Handler().postDelayed(new Runnable() {
+
+        mActivity.runServiceItem(new Runnable() {
             @Override
             public void run() {
-                if (mActivity != null && mActivity.getService() != null) {
-                    InfoRequestProto.InfoRequest req = InfoRequestProto.InfoRequest.newBuilder().setId(0).build();
-                    MessageProto.Message msg = MessageProto.Message.newBuilder().setInfoRequest(req).build();
-                    Log.d("DeviceInfoFragment", "Requesting device info");
-                    mActivity.getService().sendNetworkMessage(msg);
-                }
+                Log.d("DeviceInfoFragment", "Grabbing device info stored in service");
+                processDeviceInfo(mActivity.getService().getDeviceInfo());
+
+                InfoRequestProto.InfoRequest req = InfoRequestProto.InfoRequest.newBuilder().setId(0).build();
+                MessageProto.Message msg = MessageProto.Message.newBuilder().setInfoRequest(req).build();
+                Log.d("DeviceInfoFragment", "Requesting device info");
+                mActivity.getService().sendNetworkMessage(msg);
+
             }
-        }, 500);
+        });
     }
 
     private void createMessageHandler() {
@@ -107,9 +106,14 @@ public class DeviceInfoFragment extends Fragment {
                 }
             }
         };
-        if (mActivity != null && mActivity.getService() != null) {
-            mActivity.getService().addMessageHandler(mMessageHandler);
-        }
+        mActivity.runServiceItem(new Runnable() {
+            @Override
+            public void run() {
+                if (mActivity != null && mActivity.getService() != null) {
+                    mActivity.getService().addMessageHandler(mMessageHandler);
+                }
+            }
+        });
     }
 
     private void processMessage(MessageProto.Message data) {
@@ -167,4 +171,31 @@ public class DeviceInfoFragment extends Fragment {
             }
         });
     }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        if (mActivity != null) {
+            mActivity.runServiceItem(new Runnable() {
+                @Override
+                public void run() {
+                    mActivity.getService().removeMessageHandler(mMessageHandler);
+                }
+            });
+        }
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (mActivity != null) {
+            mActivity.runServiceItem(new Runnable() {
+                @Override
+                public void run() {
+                    mActivity.getService().addMessageHandler(mMessageHandler);
+                }
+            });
+        }
+    }
+
 }

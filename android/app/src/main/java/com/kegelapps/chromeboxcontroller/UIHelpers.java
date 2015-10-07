@@ -10,6 +10,7 @@ import android.widget.EditText;
 import com.kegelapps.chromeboxcontroller.proto.DeviceInfoProto;
 
 import java.io.FileOutputStream;
+import java.util.List;
 import java.util.regex.Pattern;
 
 /**
@@ -27,11 +28,19 @@ public class UIHelpers {
         void onDeviceConnectFailed();
     }
 
+    public interface OnFragmentCancelled {
+        boolean cancel();
+    }
+
+    public interface OnChoiceSelected {
+        void onChoiceSelected(String choice);
+    }
+
     static void parentOpenFragment(Fragment frag, int where, Fragment current) throws Exception {
         while (current.getParentFragment() != null) {
             Fragment parent = current.getParentFragment();
             if (parent instanceof FragmentOpener) {
-                ((FragmentOpener) parent).openFragment(frag, where);
+                ((FragmentOpener) parent).openFragment(frag, where, false);
                 return;
             }
         }
@@ -44,6 +53,7 @@ public class UIHelpers {
             if (parent instanceof FragmentOpener) {
                 return (FragmentOpener) parent;
             }
+            current = parent;
         }
         return null;
     }
@@ -64,20 +74,37 @@ public class UIHelpers {
         return null;
     }
 
-    static void showDisconnectDialog(Context t, String message, DialogInterface.OnDismissListener listener) {
-        assert (listener != null);
+    static void showTextDialog(Context t, String title, String message, DialogInterface.OnDismissListener listener) {
         AlertDialog.Builder builder = new AlertDialog.Builder(t);
-        builder.setOnDismissListener(listener);
-        builder.setTitle("Disconnected");
-        if (message.length() > 0)
-            builder.setMessage(message);
-        else
-            builder.setMessage("You were disconnected from the server.");
+        if (listener != null)
+            builder.setOnDismissListener(listener);
+        builder.setTitle(title);
+        builder.setMessage(message);
         builder.setCancelable(true);
 
         builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
+                dialog.dismiss();
+            }
+        });
+        builder.show();
+    }
+
+    static void showDisconnectDialog(Context t, String message, DialogInterface.OnDismissListener listener) {
+        if (message.length() > 0)
+            showTextDialog(t, "Disconnected", message, listener);
+        else
+            showTextDialog(t, "Disconnected", "You were disconnected from the server.", listener);
+    }
+
+    static void choiceEntry(Context t, String title, final List<String> choices, final OnChoiceSelected listener ) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(t);
+        builder.setTitle(title);
+        builder.setItems(choices.toArray(new CharSequence[choices.size()]), new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                listener.onChoiceSelected(choices.get(which));
                 dialog.dismiss();
             }
         });

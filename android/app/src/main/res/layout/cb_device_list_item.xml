@@ -4,12 +4,26 @@
     android:layout_height="wrap_content"
     android:padding="10dp">
 
-    <TextView
+    <LinearLayout
+        android:orientation="horizontal"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceLarge"
-        android:text="Large Text"
-        android:id="@+id/title_text" />
+        android:layout_height="match_parent">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceLarge"
+            android:text="Large Text"
+            android:id="@+id/title_text"
+            android:layout_weight="1" />
+
+        <ProgressBar
+            style="?android:attr/progressBarStyleSmall"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/loading"
+            android:visibility="gone" />
+    </LinearLayout>
 
     <TextView
         android:layout_width="match_parent"
@@ -19,4 +33,5 @@
         android:id="@+id/description_text"
         android:layout_marginLeft="5dp"
         android:layout_marginRight="5dp" />
+
 </LinearLayout>

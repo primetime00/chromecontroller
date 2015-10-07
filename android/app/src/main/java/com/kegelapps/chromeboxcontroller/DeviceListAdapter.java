@@ -20,10 +20,12 @@ public class DeviceListAdapter extends BaseAdapter {
     private Context context;
     //private List<DeviceInfoProto.DeviceInfo> devices;
     private DeviceInfoProto.DeviceInfoList devices;
+    private int mActiveDevice;
 
     public DeviceListAdapter(Context context) {
         this.context = context;
         devices = DeviceInfoProto.DeviceInfoList.getDefaultInstance();
+        mActiveDevice = -1;
     }
 
     public void addDevice(DeviceInfoProto.DeviceInfo dev) {
@@ -65,8 +67,21 @@ public class DeviceListAdapter extends BaseAdapter {
             ((TextView)v.findViewById(R.id.description_text)).setText(dev.getLocation());
         else
             ((TextView)v.findViewById(R.id.description_text)).setText(dev.getIp());
+
+        if (position == mActiveDevice) {
+            v.findViewById(R.id.loading).setVisibility(View.VISIBLE);
+        }
+        else {
+            v.findViewById(R.id.loading).setVisibility(View.GONE);
+        }
         return v;
     }
+
+    public void setActiveDevice(int position) {
+        mActiveDevice = position;
+    }
+
+    public int getActiveDevice() { return mActiveDevice; }
 
     public void removeItem(DeviceInfoProto.DeviceInfo dev) {
         int pos = devices.getDevicesList().indexOf(dev);
