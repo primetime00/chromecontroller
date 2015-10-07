@@ -14,12 +14,17 @@ message ScriptInfo {
     optional string description = 8;
     optional bool visible = 9 [default = true];
     optional ScriptChoice choice = 10;
-    optional string post_command = 11;
+    optional PostCommand post_command = 11;
 }
 
 message ScriptChoice {
     required string title = 1;
     repeated string option = 2;
+}
+
+message PostCommand {
+    required string name = 1;
+    optional int32 condition = 2;
 }
 
 message ScriptCommand {
