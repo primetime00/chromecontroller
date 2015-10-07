@@ -13,7 +13,12 @@ message ScriptInfo {
     optional bool run_failed = 7 [default = false];
     optional string description = 8;
     optional bool visible = 9 [default = true];
-    repeated string choice = 10;
+    optional ScriptChoice choice = 10;
+}
+
+message ScriptChoice {
+    required string title = 1;
+    repeated string option = 2;
 }
 
 message ScriptCommand {
