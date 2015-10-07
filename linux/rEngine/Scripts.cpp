@@ -114,9 +114,15 @@ bool rScripts::runScript(rProtos::ScriptInfo &info)
     {
         output += buffer;
     }
-    auto exit_code = (pclose(f) / 256);
+    rProtos::ScriptInfo *original = getScriptInfo(info.name());
+    info.Clear();
+    info.MergeFrom(*original);
+    auto val = pclose(f);
+    auto exit_code = (val / 256);
     info.set_return_data(output);
     info.set_return_value(exit_code);
+    if (exit_code == 127) //command was not found
+        info.set_run_failed(true);
     std::cout << "returns:\n" << output << std::endl;
     std::cout << "code:\n" << exit_code << std::endl;
     return true;

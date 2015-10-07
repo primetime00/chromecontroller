@@ -5,7 +5,7 @@ option java_outer_classname = "ScriptCommandProto";
 
 message ScriptInfo {
     required string name = 1;
-    optional string output_type = 2 [default = "list"];
+    optional string output_type = 2 [default = "none"];
     repeated string associated_command = 3;
     repeated string params = 4;
     optional string return_data = 5;
@@ -13,6 +13,7 @@ message ScriptInfo {
     optional bool run_failed = 7 [default = false];
     optional string description = 8;
     optional bool visible = 9 [default = true];
+    repeated string choice = 10;
 }
 
 message ScriptCommand {

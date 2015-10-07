@@ -179,6 +179,7 @@ void rEngine::onCommand(rMessage data)
     auto ret = mProcessor->createMessage();
     mScripts->runScript(*s);
     ret->set_allocated_command(s);
+    std::cout << "script type: " << s->output_type() << std::endl;
 	if (convertMessageToVectorData(ret))
 		mServer->GetConnection()->Send(mByteData);
 }
