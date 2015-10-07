@@ -20,7 +20,7 @@ import java.util.regex.Pattern;
 /**
  * Created by keg45397 on 10/2/2015.
  */
-public class DeviceSettingsFragment extends Fragment {
+public class DeviceSettingsFragment extends Fragment implements UIHelpers.OnFragmentCancelled {
 
     private View mRootView;
     private View mDeviceNameButton, mDeviceLocationButton, mDeviceIPButton, mDeviceMACButton;
@@ -219,11 +219,18 @@ public class DeviceSettingsFragment extends Fragment {
         });
     }
 
-    void openDeviceList() {
+    private void openDeviceList() {
         FragmentOpener op = UIHelpers.findFragmentOpener(this);
         if (op != null) {
             op.openDeviceList();
         }
+    }
+
+
+    @Override
+    public boolean cancel() {
+        openDeviceList();
+        return false;
     }
 
 }

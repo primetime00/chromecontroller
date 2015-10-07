@@ -13,6 +13,7 @@ import com.kegelapps.chromeboxcontroller.proto.PingProto;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -31,6 +32,8 @@ public class NetworkRunnable implements Runnable {
     private Socket mSocket;
     private byte[] mRecvBuffer;
     private ByteBuffer mBuffer;
+    private boolean mActive;
+
     int position = 0;
 
     private int mNetworkMessageId;
@@ -66,20 +69,24 @@ public class NetworkRunnable implements Runnable {
         assert (listener != null);
         this.context = context;
         this.mListener = listener;
+        mActive = false;
     }
 
     @Override
     public void run() {
+        mActive = true;
         mRecvBuffer = new byte[50000];
         mNetworkMessageId = 0; //this is the packet number for all sent packets
         mBuffer = ByteBuffer.wrap(mRecvBuffer);
         Looper.prepare();
 
         try {
-            mSocket = new Socket(mIP, mPort);
+            mSocket = new Socket();
+            mSocket.connect(new InetSocketAddress(mIP, mPort), 3000);
         } catch (IOException e) { //could not connect for some reason?
             e.printStackTrace();
             mListener.onConnectionFailed();
+            mActive = false;
             return;
         }
 
@@ -113,6 +120,8 @@ public class NetworkRunnable implements Runnable {
             e.printStackTrace();
         }
         Log.d("NetworkRunnable", "Looper thread is shutting down.");
+        mListener.onDisconnectComplete();
+        mActive = false;
     }
 
     private void startReceiveThread() {
@@ -139,7 +148,6 @@ public class NetworkRunnable implements Runnable {
                 break;
             case NETWORK_THREAD_PING: //sending a ping message
                 data = createPingMessage(msg.arg1);
-                Log.d("NetworkRunnable", "Sending a ping message");
                 sendMessagePacket(data);
                 break;
             default:
@@ -185,10 +193,11 @@ public class NetworkRunnable implements Runnable {
 
     public void recvFunction() {
         int length = 0;
+        int read = 0;
         mBuffer.order(ByteOrder.LITTLE_ENDIAN);
         while (true) {
             try {
-                int read = mSocket.getInputStream().read(mRecvBuffer, position, mRecvBuffer.length - position);
+                read += mSocket.getInputStream().read(mRecvBuffer, position, mRecvBuffer.length - position);
                 if (read == -1) //we've been disconnected?
                 {
                     closeNetwork();
@@ -200,15 +209,20 @@ public class NetworkRunnable implements Runnable {
 
                 if (position == 0 && read < 4)
                     continue;
-                length = mBuffer.getInt(0);
+                if (length == 0)
+                    length = mBuffer.getInt(0);
+                Log.d("NetworkRunnable", "Length is " + length + " Read is " + read);
+                position = read;
                 while (read >= length + 4) {
                     ByteBuffer data = extractMessageData(mRecvBuffer, length);
                     MessageProto.Message msg = MessageProto.Message.parseFrom(data.array());
                     processMessage(msg);
                     read -= (length + 4);
                     position = read;
-                    if (read < 4)
+                    if (read < 4) {
+                        length = 0;
                         break;
+                    }
                     length = mBuffer.getInt(0);
                 }
             } catch (IOException e) {
@@ -235,4 +249,6 @@ public class NetworkRunnable implements Runnable {
     public Handler getHandler() {
         return mNetworkHandler;
     }
+
+    public boolean isActive() { return  mActive;}
 }

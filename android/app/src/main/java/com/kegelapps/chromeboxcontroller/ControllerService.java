@@ -12,6 +12,7 @@ import android.util.Log;
 
 import com.kegelapps.chromeboxcontroller.proto.DeviceInfoProto;
 import com.kegelapps.chromeboxcontroller.proto.MessageProto;
+import com.kegelapps.chromeboxcontroller.proto.ScriptCommandProto;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -48,6 +49,11 @@ public class ControllerService extends Service {
 
     //storable info
     private DeviceInfoProto.DeviceInfo mCurrentDeviceInfo;
+    private ScriptCommandProto.ScriptInfoList mScripts;
+    private ScriptCommandProto.ScriptInfo mLastResult;
+    private Object deviceLock = new Object();
+    private Object scriptLock = new Object();
+    private Object resultLock = new Object();
 
     public interface OnMessage {
         void onMessage(Message msg, MessageProto.Message data);
@@ -63,6 +69,7 @@ public class ControllerService extends Service {
         void onConnectionFailed();
         void onDisconnected(String message);
         void onReceivedMessage(MessageProto.Message msg);
+        void onDisconnectComplete();
     }
 
     @Override
@@ -133,6 +140,13 @@ public class ControllerService extends Service {
             public void onReceivedMessage(MessageProto.Message msg) {
                 processMessage(msg);
             }
+
+            @Override
+            public void onDisconnectComplete() {
+                Message serviceMsg = Message.obtain();
+                serviceMsg.what = MESSAGE_DISCONNECT_NETWORK;
+                sendUIMessage(serviceMsg);
+            }
         });
     }
 
@@ -140,23 +154,81 @@ public class ControllerService extends Service {
         if (msg.hasDeviceInfo()) { //we have device info!
             storeDeviceInfo(msg.getDeviceInfo());
         }
+        if (msg.hasCommandList()) { //we have commands
+            storeDeviceCommands(msg.getCommandList());
+        }
+        if (msg.hasCommand() && msg.getCommand().hasReturnValue()) {//we have some return data to store
+            storeLastCommandResult(msg.getCommand());
+        }
+
         Message uiMessage = Message.obtain();
         uiMessage.what = MESSAGE_RECEIVED_MESSAGE;
         Bundle b = new Bundle();
         b.putByteArray(MESSAGE_DATA_NAME_KEY, msg.toByteArray());
         uiMessage.setData(b);
+        Log.d("Service", "Sending message " + msg.toString() + " to UI");
         sendUIMessage(uiMessage);
     }
 
-    public synchronized void storeDeviceInfo(DeviceInfoProto.DeviceInfo deviceInfo) {
-        mCurrentDeviceInfo = DeviceInfoProto.DeviceInfo.newBuilder(deviceInfo).build();
+    public void storeDeviceCommands(ScriptCommandProto.ScriptInfoList cmdList) {
+        synchronized (scriptLock) {
+            mScripts = ScriptCommandProto.ScriptInfoList.newBuilder(cmdList).build();
+        }
     }
 
-    public synchronized DeviceInfoProto.DeviceInfo getDeviceInfo() {
+    private void storeLastCommandResult(ScriptCommandProto.ScriptInfo result) {
+        synchronized (resultLock) {
+            if (result == null)
+                mLastResult = null;
+            else
+                mLastResult = ScriptCommandProto.ScriptInfo.newBuilder(result).build();
+        }
+    }
+
+    public void storeDeviceInfo(DeviceInfoProto.DeviceInfo deviceInfo) {
+        synchronized (deviceLock) {
+            mCurrentDeviceInfo = DeviceInfoProto.DeviceInfo.newBuilder(deviceInfo).build();
+        }
+    }
+
+    public DeviceInfoProto.DeviceInfo getDeviceInfo() {
         if (mCurrentDeviceInfo == null)
             return null;
-        return DeviceInfoProto.DeviceInfo.newBuilder(mCurrentDeviceInfo).build();
+        synchronized (deviceLock) {
+            return DeviceInfoProto.DeviceInfo.newBuilder(mCurrentDeviceInfo).build();
+        }
     }
+
+    public ScriptCommandProto.ScriptInfoList getDeviceCommands() {
+        if (mScripts == null)
+            return null;
+        synchronized (scriptLock) {
+            return ScriptCommandProto.ScriptInfoList.newBuilder(mScripts).build();
+        }
+    }
+
+    public ScriptCommandProto.ScriptInfo getDeviceCommand(String name) {
+        if (mScripts == null)
+            return null;
+        synchronized (scriptLock) {
+            for (ScriptCommandProto.ScriptInfo current : mScripts.getScriptsList()) {
+                if (current.getName().equals(name))
+                    return current;
+            }
+            return null;
+        }
+    }
+
+
+    public ScriptCommandProto.ScriptInfo getLastResult() {
+        if (mLastResult == null)
+            return null;
+        synchronized (resultLock) {
+            return ScriptCommandProto.ScriptInfo.newBuilder(mLastResult).build();
+        }
+    }
+
+
 
     private void sendUIMessage(Message msg) {
         try {
@@ -170,6 +242,8 @@ public class ControllerService extends Service {
     public void sendNetworkMessage(MessageProto.Message msg) {
         if (mNetworkRunnable == null)
             return;
+        if (msg.hasCommand()) //we are sending a script command, lets clear out the result value
+            storeLastCommandResult(null);
         Message m = Message.obtain();
         m.what = NetworkRunnable.NETWORK_THREAD_SEND;
         Bundle b = new Bundle();
@@ -219,9 +293,13 @@ public class ControllerService extends Service {
         return false;
     }
 
-    public void startNetwork(DeviceInfoProto.DeviceInfo dev) {
+    public boolean startNetwork(DeviceInfoProto.DeviceInfo dev) {
+        if (mNetworkRunnable.isActive())
+            return false;
+        storeDeviceInfo(dev);
         mNetworkRunnable.setConnection(dev);
         new Thread(mNetworkRunnable).start();
+        return true;
     }
 
     public void disconnectNetwork() {
@@ -238,6 +316,11 @@ public class ControllerService extends Service {
         if (handler != null)
             mMessageHandlerList.remove(handler);
     }
+
+    public void clearMessageHandlers() {
+        mMessageHandlerList.clear();
+    }
+
 
     public List<OnMessage> getMessageHandlers() { return mMessageHandlerList; }
 

@@ -36,7 +36,7 @@ public class ServiceDiscoveryRunnable implements Runnable {
     private Object mCacheLock = new Object();
     private boolean mComplete;
 
-    private int timeout = 60000;
+    private int timeout = 10000;
     private Context context;
 
     public ServiceDiscoveryRunnable(Context context, ControllerService.OnServiceDiscovery disc) {
@@ -122,7 +122,7 @@ public class ServiceDiscoveryRunnable implements Runnable {
                 stop();
                 mComplete = true;
             }
-        }, 10000);
+        }, timeout);
 
         //just a test!!!!
         new Timer().schedule(new TimerTask() {
@@ -130,8 +130,12 @@ public class ServiceDiscoveryRunnable implements Runnable {
             public void run() {
                 DeviceInfoProto.DeviceInfo dev = DeviceInfoProto.DeviceInfo.newBuilder().setName("Test").setIp("192.168.1.55").setMac("aa:bb:cc:dd:ee:ff").setPort(30015).build();
                 processDevice(dev);
+                dev = DeviceInfoProto.DeviceInfo.newBuilder().setName("Work").setIp("192.168.1.7").setMac("aa:bb:cc:dd:ee:fc").setPort(30015).build();
+                processDevice(dev);
+                dev = DeviceInfoProto.DeviceInfo.newBuilder().setName("Home").setIp("192.168.1.22").setMac("aa:bb:cc:dd:ee:fe").setPort(30015).build();
+                processDevice(dev);
             }
-        }, 6000);
+        }, 3000);
 
     }
 

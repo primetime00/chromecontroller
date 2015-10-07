@@ -29,7 +29,7 @@ import com.kegelapps.chromeboxcontroller.proto.MessageProto;
 /**
  * Created by Ryan on 9/5/2015.
  */
-public class DeviceListFragment extends Fragment implements UIHelpers.OnDeviceConnected {
+public class DeviceListFragment extends Fragment implements UIHelpers.OnDeviceConnected, UIHelpers.OnFragmentCancelled {
 
     private View mRootView;
     private ListView mDeviceList;
@@ -39,6 +39,10 @@ public class DeviceListFragment extends Fragment implements UIHelpers.OnDeviceCo
     private BaseActivity mActivity;
     private DeviceInfoProto.DeviceInfo mDeviceInfo;
 
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+    }
 
     @Nullable
     @Override
@@ -68,8 +72,7 @@ public class DeviceListFragment extends Fragment implements UIHelpers.OnDeviceCo
         mDeviceList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                mDeviceInfo = (DeviceInfoProto.DeviceInfo) mAdapter.getItem(position);
-                connectToDevice(mDeviceInfo);
+                connectToDevice(position);
             }
         });
 
@@ -95,9 +98,6 @@ public class DeviceListFragment extends Fragment implements UIHelpers.OnDeviceCo
     private void loadUserDevices() {
         for (DeviceInfoProto.DeviceInfo dev : mActivity.getStorage().getUserDeviceList())
             mAdapter.addDevice(dev);
-/*        DeviceInfoProto.DeviceInfo dev = DeviceInfoProto.DeviceInfo.newBuilder().
-                setMode("Steam").setPort(30015).setLocation("Work").setIp("10.1.213.162").
-                setId(1).setMac("08:00:27:7a:77:af").setUserCreated(true).build();*/
     }
 
     @Override
@@ -113,6 +113,33 @@ public class DeviceListFragment extends Fragment implements UIHelpers.OnDeviceCo
                 @Override
                 public void run() {
                     mActivity.getService().removeMessageHandler(mMessageHandler);
+                }
+            });
+        }
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        if (mActivity != null) {
+            mActivity.runServiceItem(new Runnable() {
+                @Override
+                public void run() {
+                    mActivity.getService().removeMessageHandler(mMessageHandler);
+                }
+            });
+        }
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (mActivity != null) {
+            mActivity.runServiceItem(new Runnable() {
+                @Override
+                public void run() {
+                    mActivity.getService().addMessageHandler(mMessageHandler);
+                    mActivity.getService().startDiscovery(); //grab the cached items
                 }
             });
         }
@@ -163,10 +190,11 @@ public class DeviceListFragment extends Fragment implements UIHelpers.OnDeviceCo
         mMessageHandler = new ControllerService.OnMessage() {
             @Override
             public void onMessage(Message msg, MessageProto.Message data) {
+                byte [] serviceData;
                 switch (msg.what)
                 {
                     case ControllerService.MESSAGE_DISCOVERY:
-                        byte [] serviceData = msg.getData().getByteArray(ControllerService.MESSAGE_DATA_NAME_KEY);
+                        serviceData = msg.getData().getByteArray(ControllerService.MESSAGE_DATA_NAME_KEY);
                         if (serviceData == null)
                             return;
                         try {
@@ -174,6 +202,19 @@ public class DeviceListFragment extends Fragment implements UIHelpers.OnDeviceCo
                             addDeviceFromDiscovery(disc);
                         } catch (InvalidProtocolBufferException e) {
                             Log.e("DeviceListFragment", "Could not parse ServiceDiscoveryProtocol");
+                            e.printStackTrace();
+                            return;
+                        }
+                        break;
+                    case ControllerService.MESSAGE_DISCOVERY_CACHE:
+                        serviceData = msg.getData().getByteArray(ControllerService.MESSAGE_DATA_NAME_KEY);
+                        if (serviceData == null)
+                            return;
+                        try {
+                            DeviceInfoProto.DeviceInfoList devices = DeviceInfoProto.DeviceInfoList.parseFrom(serviceData);
+                            addDeviceCache(devices);
+                        } catch (InvalidProtocolBufferException e) {
+                            Log.e("DeviceListFragment", "Could not parse ServiceDiscoveryProtocol Cache");
                             e.printStackTrace();
                             return;
                         }
@@ -199,23 +240,34 @@ public class DeviceListFragment extends Fragment implements UIHelpers.OnDeviceCo
         };
     }
 
-    private void addDeviceFromDiscovery(DeviceInfoProto.DeviceInfo dev) {
-        DeviceInfoProto.DeviceInfo adapterDev = mAdapter.findDevice(dev);
-        if (adapterDev != null) {
-            adapterDev.toBuilder().mergeFrom(dev).build();
-            mAdapter.notifyDataSetChanged();
+    private void addDeviceCache(DeviceInfoProto.DeviceInfoList devices) {
+        for (DeviceInfoProto.DeviceInfo cached_item : devices.getDevicesList()) {
+            DeviceInfoProto.DeviceInfo item = mAdapter.findDevice(cached_item);
+            if (item != null) //this item is currently in the list, so replace it
+                mAdapter.removeItem(item);
+            mAdapter.addDevice(cached_item);
         }
-        else {
-            mAdapter.addDevice(dev);
-            mAdapter.notifyDataSetChanged();
-        }
+        mAdapter.notifyDataSetChanged();
     }
 
-    private void connectToDevice(DeviceInfoProto.DeviceInfo deviceInfo) {
+    private void addDeviceFromDiscovery(DeviceInfoProto.DeviceInfo dev) {
+        DeviceInfoProto.DeviceInfo adapterDev = mAdapter.findDevice(dev);
+        if (adapterDev != null)
+            mAdapter.removeItem(adapterDev);
+        mAdapter.addDevice(dev);
+        mAdapter.notifyDataSetChanged();
+    }
+
+    private void connectToDevice(int position) {
         if (mActivity == null || mActivity.getService() == null) {
             onDeviceConnectFailed();
+            return;
         }
-        mActivity.getService().startNetwork(deviceInfo);
+        DeviceInfoProto.DeviceInfo deviceInfo = (DeviceInfoProto.DeviceInfo) mAdapter.getItem(position);
+        if (mActivity.getService().startNetwork(deviceInfo)) {
+            mAdapter.setActiveDevice(position);
+        }
+        mAdapter.notifyDataSetChanged();
     }
 
     private void openDeviceMenu() {
@@ -257,6 +309,9 @@ public class DeviceListFragment extends Fragment implements UIHelpers.OnDeviceCo
     @Override
     public void onDeviceConnected() {
         stopDiscoveryService();
+        mDeviceInfo = mActivity.getService().getDeviceInfo();
+        mAdapter.setActiveDevice(-1);
+        mAdapter.notifyDataSetChanged();
         if (!mDeviceInfo.hasName()) { //it doesn't have a name, allow a name.
             UIHelpers.textEntry(getActivity(), "Name this device", new UIHelpers.OnDeviceTextEntry() {
                 @Override
@@ -283,6 +338,13 @@ public class DeviceListFragment extends Fragment implements UIHelpers.OnDeviceCo
     }
     @Override
     public void onDeviceConnectFailed() {
+        mAdapter.setActiveDevice(-1);
+        mAdapter.notifyDataSetChanged();
         showConnectionFailedDialog();
+    }
+
+    @Override
+    public boolean cancel() {
+        return true;
     }
 }
