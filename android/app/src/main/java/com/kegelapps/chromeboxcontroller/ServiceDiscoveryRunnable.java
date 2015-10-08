@@ -123,20 +123,6 @@ public class ServiceDiscoveryRunnable implements Runnable {
                 mComplete = true;
             }
         }, timeout);
-
-        //just a test!!!!
-        new Timer().schedule(new TimerTask() {
-            @Override
-            public void run() {
-                DeviceInfoProto.DeviceInfo dev = DeviceInfoProto.DeviceInfo.newBuilder().setName("Test").setIp("192.168.1.55").setMac("aa:bb:cc:dd:ee:ff").setPort(30015).build();
-                //processDevice(dev);
-                dev = DeviceInfoProto.DeviceInfo.newBuilder().setName("Your Work").setIp("10.1.213.162").setMac("aa:bb:cc:dd:ee:fc").setPort(30015).build();
-                processDevice(dev);
-                //dev = DeviceInfoProto.DeviceInfo.newBuilder().setName("Home").setIp("192.168.1.22").setMac("aa:bb:cc:dd:ee:fe").setPort(30015).build();
-                //processDevice(dev);
-            }
-        }, 3000);
-
     }
 
     private void processDevice(DeviceInfoProto.DeviceInfo dev) {
