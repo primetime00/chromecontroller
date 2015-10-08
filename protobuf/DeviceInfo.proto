@@ -13,6 +13,7 @@ message DeviceInfo {
 	optional string mode = 6;
 	optional int32 port = 7;
 	optional bool user_created = 8 [default = true];
+	optional bool found = 9 [default = false];
 }
 
 message DeviceInfoList {
