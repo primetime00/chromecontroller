@@ -12,4 +12,5 @@ info {
 #!/bin/sh
 if [ $1 = "Yes" ]; then
 	echo "Rebooting"
+	reboot
 fi
