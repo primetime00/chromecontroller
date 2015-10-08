@@ -107,6 +107,9 @@ public class ParentFragment extends Fragment implements FragmentOpener {
     @Override
     public void onDetach() {
         super.onDetach();
+        UIHelpers.dismissDialog();
+
+        //getActivity().getActionBar().
         try {
             Field childFragmentManager = Fragment.class.getDeclaredField("mChildFragmentManager");
             childFragmentManager.setAccessible(true);

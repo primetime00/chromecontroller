@@ -9,6 +9,8 @@ import android.util.Patterns;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.TextView;
 
@@ -40,9 +42,6 @@ public class DeviceSettingsFragment extends Fragment implements UIHelpers.OnFrag
     public void onViewCreated(View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         mActivity = UIHelpers.getBaseActivity(this);
-        mDeviceInfo = mActivity.getService().getDeviceInfo();
-        if (mDeviceInfo == null)
-            mDeviceInfo = DeviceInfoProto.DeviceInfo.getDefaultInstance();
         mDeviceNameButton = view.findViewById(R.id.device_name);
         mDeviceLocationButton = view.findViewById(R.id.device_location);
         mDeviceIPButton = view.findViewById(R.id.device_ip);
@@ -57,9 +56,18 @@ public class DeviceSettingsFragment extends Fragment implements UIHelpers.OnFrag
         mCancelButton = (Button) view.findViewById(R.id.cancel);
 
 
-        setupSettings();
-        setupButtons();
-        updateView();
+        mActivity.runServiceItem(new Runnable() {
+            @Override
+            public void run() {
+                mDeviceInfo = mActivity.getService().getDeviceInfo();
+                if (mDeviceInfo == null)
+                    mDeviceInfo = DeviceInfoProto.DeviceInfo.getDefaultInstance();
+                setupSettings();
+                setupButtons();
+                updateView();
+            }
+        });
+
 
     }
 
@@ -89,7 +97,8 @@ public class DeviceSettingsFragment extends Fragment implements UIHelpers.OnFrag
         mDeviceNameButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                UIHelpers.textEntry(getActivity(), "Enter device name", new UIHelpers.OnDeviceTextEntry() {
+                String name = mDeviceInfo.hasName() ? mDeviceInfo.getName() : null;
+                UIHelpers.textEntry(getActivity(), "Enter device name", name, new UIHelpers.OnDeviceTextEntry() {
                     @Override
                     public void onTextEntry(String name) {
                         mDeviceInfo = mDeviceInfo.toBuilder().setName(name).build();
@@ -107,7 +116,8 @@ public class DeviceSettingsFragment extends Fragment implements UIHelpers.OnFrag
         mDeviceLocationButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                UIHelpers.textEntry(getActivity(), "Enter device location", new UIHelpers.OnDeviceTextEntry() {
+                String location = mDeviceInfo.hasLocation() ? mDeviceInfo.getLocation() : null;
+                UIHelpers.textEntry(getActivity(), "Enter device location", location, new UIHelpers.OnDeviceTextEntry() {
                     @Override
                     public void onTextEntry(String name) {
                         mDeviceInfo = mDeviceInfo.toBuilder().setLocation(name).build();
@@ -125,7 +135,8 @@ public class DeviceSettingsFragment extends Fragment implements UIHelpers.OnFrag
         mDeviceIPButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                UIHelpers.textEntry(getActivity(), "Enter device IP address", new UIHelpers.OnDeviceTextEntry() {
+                String ip = mDeviceInfo.hasIp() ? mDeviceInfo.getIp() : null;
+                UIHelpers.textEntry(getActivity(), "Enter device IP address", ip, new UIHelpers.OnDeviceTextEntry() {
                     @Override
                     public void onTextEntry(String name) {
                         Matcher matcher = Patterns.IP_ADDRESS.matcher(name);
@@ -148,7 +159,8 @@ public class DeviceSettingsFragment extends Fragment implements UIHelpers.OnFrag
         mDeviceMACButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                UIHelpers.textEntry(getActivity(), "Enter device MAC", new UIHelpers.OnDeviceTextEntry() {
+                String mac = mDeviceInfo.hasMac() ? mDeviceInfo.getMac() : null;
+                UIHelpers.textEntry(getActivity(), "Enter device MAC", mac, new UIHelpers.OnDeviceTextEntry() {
                     @Override
                     public void onTextEntry(String name) {
                         Pattern pat = Pattern.compile("([\\da-fA-F]{2}(?:\\:|-|$)){6}");
@@ -232,5 +244,4 @@ public class DeviceSettingsFragment extends Fragment implements UIHelpers.OnFrag
         openDeviceList();
         return false;
     }
-
 }

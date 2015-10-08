@@ -59,6 +59,7 @@ public class BaseActivity extends AppCompatActivity {
 
         mStorage = new Storage(this);
         mStorage.loadUserDevices();
+        mStorage.loadSeenDevices();
 
 
     }

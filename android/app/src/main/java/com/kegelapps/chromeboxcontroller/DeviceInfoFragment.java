@@ -137,7 +137,11 @@ public class DeviceInfoFragment extends Fragment {
     }
 
     private void changeName() {
-        UIHelpers.textEntry(getActivity(), "Name this device", new UIHelpers.OnDeviceTextEntry() {
+        DeviceInfoProto.DeviceInfo info = mActivity.getService().getDeviceInfo();
+        String name = null;
+        if (info.hasName())
+            name = info.getName();
+        UIHelpers.textEntry(getActivity(), "Name this device", name, new UIHelpers.OnDeviceTextEntry() {
             @Override
             public void onTextEntry(String name) {
                 InfoSetProto.InfoSet info = InfoSetProto.InfoSet.newBuilder().setName(name).build();
@@ -155,7 +159,11 @@ public class DeviceInfoFragment extends Fragment {
     }
 
     private void changeLocation() {
-        UIHelpers.textEntry(getActivity(), "Where is this device located?", new UIHelpers.OnDeviceTextEntry() {
+        DeviceInfoProto.DeviceInfo info = mActivity.getService().getDeviceInfo();
+        String loc = null;
+        if (info.hasLocation())
+            loc = info.getLocation();
+        UIHelpers.textEntry(getActivity(), "Where is this device located?", loc, new UIHelpers.OnDeviceTextEntry() {
             @Override
             public void onTextEntry(String name) {
                 InfoSetProto.InfoSet info = InfoSetProto.InfoSet.newBuilder().setLocation(name).build();

@@ -33,6 +33,8 @@ public class ControllerService extends Service {
     static final int MESSAGE_CONNECTION_DISCONNECT  = 6;
     static final int MESSAGE_RECEIVED_MESSAGE       = 7;
     static final int MESSAGE_DISCONNECT_NETWORK     = 8;
+    static final int MESSAGE_WAKE_SUCCESS           = 9;
+    static final int MESSAGE_WAKE_FAILED            = 10;
 
 
 
@@ -44,6 +46,7 @@ public class ControllerService extends Service {
     private Thread mServiceDiscoveryThread;
     private ServiceDiscoveryRunnable mDiscoveryRunnable;
     private NetworkRunnable mNetworkRunnable;
+    private WakeRunnable mWakeRunnable;
     private Messenger mMessenger;
     private List<OnMessage> mMessageHandlerList;
 
@@ -64,6 +67,11 @@ public class ControllerService extends Service {
         void onCache(DeviceInfoProto.DeviceInfoList devices);
     }
 
+    public interface OnWake {
+        void onWakeSuccess();
+        void onWakeFail();
+    }
+
     public interface OnConnection {
         void onConnectionSuccess();
         void onConnectionFailed();
@@ -80,6 +88,36 @@ public class ControllerService extends Service {
         mMessenger = (Messenger)intent.getExtras().get("MESSENGER");
         Log.d("Service", "Starting service from thread " + Thread.currentThread());
         mRunning = true;
+        createDiscoveryRunnable();
+        createNetworkRunnable();
+        createWakeRunnable();
+        Message startMsg = Message.obtain();
+        startMsg.what = MESSAGE_START;
+        sendUIMessage(startMsg);
+        return super.onStartCommand(intent, flags, startId);
+    }
+
+    private void createWakeRunnable() {
+        mWakeRunnable = new WakeRunnable(getApplicationContext(), new OnWake() {
+            @Override
+            public void onWakeSuccess() {
+                Log.d("Service", "Successfully sent wake packet");
+                Message serviceMsg = Message.obtain();
+                serviceMsg.what = MESSAGE_WAKE_SUCCESS;
+                sendUIMessage(serviceMsg);
+            }
+
+            @Override
+            public void onWakeFail() {
+                Log.d("Service", "Successfully sent wake packet");
+                Message serviceMsg = Message.obtain();
+                serviceMsg.what = MESSAGE_WAKE_FAILED;
+                sendUIMessage(serviceMsg);
+            }
+        });
+    }
+
+    private void createDiscoveryRunnable() {
         mDiscoveryRunnable = new ServiceDiscoveryRunnable(getApplicationContext(), new OnServiceDiscovery() {
             @Override
             public void onDiscovery(DeviceInfoProto.DeviceInfo data) {
@@ -103,11 +141,6 @@ public class ControllerService extends Service {
                 sendUIMessage(serviceMsg);
             }
         });
-        createNetworkRunnable();
-        Message startMsg = Message.obtain();
-        startMsg.what = MESSAGE_START;
-        sendUIMessage(startMsg);
-        return super.onStartCommand(intent, flags, startId);
     }
 
     private void createNetworkRunnable() {
@@ -330,6 +363,14 @@ public class ControllerService extends Service {
             return ControllerService.this;
         }
     }
+
+    public void wakeDevice(DeviceInfoProto.DeviceInfo dev) {
+        if (mWakeRunnable.isActive())
+            return;
+        mWakeRunnable.setDevice(dev);
+        new Thread(mWakeRunnable).start();
+    }
+
 
 }
 

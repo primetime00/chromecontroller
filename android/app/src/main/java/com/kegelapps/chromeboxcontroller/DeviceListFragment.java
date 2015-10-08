@@ -65,6 +65,7 @@ public class DeviceListFragment extends Fragment implements UIHelpers.OnDeviceCo
 
         createMessageHandler();
 
+        loadSeenDevices();
         loadUserDevices();
 
         mDeviceList.setAdapter(mAdapter);
@@ -99,6 +100,12 @@ public class DeviceListFragment extends Fragment implements UIHelpers.OnDeviceCo
         for (DeviceInfoProto.DeviceInfo dev : mActivity.getStorage().getUserDeviceList())
             mAdapter.addDevice(dev);
     }
+
+    private void loadSeenDevices() {
+        for (DeviceInfoProto.DeviceInfo dev : mActivity.getStorage().getSeenDeviceList())
+            mAdapter.addDevice(dev);
+    }
+
 
     @Override
     public void onStart() {
@@ -154,10 +161,12 @@ public class DeviceListFragment extends Fragment implements UIHelpers.OnDeviceCo
             inflater.inflate(R.menu.device_list_menu, menu);
             if (mDeviceList != null) {
                 DeviceInfoProto.DeviceInfo dev = (DeviceInfoProto.DeviceInfo) mDeviceList.getAdapter().getItem(info.position);
-                if (!dev.hasMac())
+                if ( (!dev.hasMac()) || (!dev.getUserCreated() && dev.getFound()))
                     menu.removeItem(R.id.wake);
-                if ( !(dev.hasUserCreated() && dev.getUserCreated() == true)) {
+                if (!dev.getUserCreated()) {
                     menu.removeItem(R.id.edit);
+                }
+                if (!dev.getUserCreated() && dev.getFound()) {
                     menu.removeItem(R.id.remove);
                 }
             }
@@ -170,8 +179,10 @@ public class DeviceListFragment extends Fragment implements UIHelpers.OnDeviceCo
         DeviceInfoProto.DeviceInfo dev = (DeviceInfoProto.DeviceInfo)mAdapter.getItem(info.position);
         switch (item.getItemId()) {
             case R.id.remove:
-                mActivity.getStorage().removeUserDevice(dev);
-                mActivity.getStorage().saveUserDevices();
+                if (mActivity.getStorage().removeUserDevice(dev))
+                    mActivity.getStorage().saveUserDevices();
+                if (mActivity.getStorage().removeSeenDevice(dev))
+                    mActivity.getStorage().saveSeenDevices();
                 mAdapter.removeItem(dev);
                 mAdapter.notifyDataSetChanged();
                 return true;
@@ -180,6 +191,9 @@ public class DeviceListFragment extends Fragment implements UIHelpers.OnDeviceCo
                 openDeviceSettings();
                 return true;
             case R.id.wake:
+                if (mActivity.getService() != null) {
+                    mActivity.getService().wakeDevice(dev);
+                }
                 return true;
             default:
                 return super.onContextItemSelected(item);
@@ -232,6 +246,12 @@ public class DeviceListFragment extends Fragment implements UIHelpers.OnDeviceCo
                                 return;
                             }
                         });
+                        break;
+                    case ControllerService.MESSAGE_WAKE_SUCCESS:
+                        UIHelpers.showTextDialog(getActivity(), "Wake Success", "This device should we awakening.", null);
+                        break;
+                    case ControllerService.MESSAGE_WAKE_FAILED:
+                        UIHelpers.showTextDialog(getActivity(), "Wake Failed", "Failed to wake device.\nPlease check device MAC.", null);
                         break;
                     default:
                         break;
@@ -313,7 +333,7 @@ public class DeviceListFragment extends Fragment implements UIHelpers.OnDeviceCo
         mAdapter.setActiveDevice(-1);
         mAdapter.notifyDataSetChanged();
         if (!mDeviceInfo.hasName()) { //it doesn't have a name, allow a name.
-            UIHelpers.textEntry(getActivity(), "Name this device", new UIHelpers.OnDeviceTextEntry() {
+            UIHelpers.textEntry(getActivity(), "Name this device", null, new UIHelpers.OnDeviceTextEntry() {
                 @Override
                 public void onTextEntry(String name) { //the device is named, lets push that name to the server
                     mDeviceInfo = mDeviceInfo.toBuilder().setName(name).build();
@@ -321,6 +341,8 @@ public class DeviceListFragment extends Fragment implements UIHelpers.OnDeviceCo
                     MessageProto.Message msg = MessageProto.Message.newBuilder().setInfoSet(info).build();
                     if (mActivity != null && mActivity.getService() != null) {
                         mActivity.getService().sendNetworkMessage(msg);
+                        if (!mDeviceInfo.getUserCreated()) //this is not a user created device, so we add it to the 'seen' devices
+                            addSeenDevice(mDeviceInfo);
                         openDeviceMenu();
                     }
                 }
@@ -334,8 +356,16 @@ public class DeviceListFragment extends Fragment implements UIHelpers.OnDeviceCo
             });
             return;
         }
+        if (!mDeviceInfo.getUserCreated()) //this is not a user created device, so we add it to the 'seen' devices
+            addSeenDevice(mDeviceInfo);
         openDeviceMenu();
     }
+
+    private void addSeenDevice(DeviceInfoProto.DeviceInfo dev) {
+        mActivity.getStorage().addSeenDevice(dev);
+        mActivity.getStorage().saveSeenDevices();
+    }
+
     @Override
     public void onDeviceConnectFailed() {
         mAdapter.setActiveDevice(-1);

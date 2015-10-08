@@ -18,6 +18,8 @@ import java.util.regex.Pattern;
  */
 public class UIHelpers {
 
+    private static AlertDialog dlg;
+
     public interface OnDeviceTextEntry {
         void onTextEntry(String name);
         void onCancelled();
@@ -88,7 +90,7 @@ public class UIHelpers {
                 dialog.dismiss();
             }
         });
-        builder.show();
+        dlg = builder.show();
     }
 
     static void showDisconnectDialog(Context t, String message, DialogInterface.OnDismissListener listener) {
@@ -108,15 +110,17 @@ public class UIHelpers {
                 dialog.dismiss();
             }
         });
-        builder.show();
+        dlg = builder.show();
     }
 
-    public static void textEntry(Context c, String title, final OnDeviceTextEntry listener) {
+    public static void textEntry(Context c, String title, String defaultValue, final OnDeviceTextEntry listener) {
         assert (listener != null);
         AlertDialog.Builder builder = new AlertDialog.Builder(c);
         builder.setTitle(title);
         final EditText input = new EditText(c);
         input.setInputType(InputType.TYPE_CLASS_TEXT);
+        if (defaultValue != null)
+            input.setText(defaultValue);
         builder.setView(input);
         builder.setCancelable(false);
 
@@ -137,7 +141,8 @@ public class UIHelpers {
             }
         });
 
-        builder.show();
+        dlg = builder.show();
+        dlg.getDelegate().setHandleNativeActionModesEnabled(false);
     }
 
     static public int convertIp(String ipStr) {
@@ -151,5 +156,10 @@ public class UIHelpers {
             result |= Integer.parseInt(part);
         }
         return result;
+    }
+
+    static void dismissDialog() {
+        if (dlg != null)
+            dlg.dismiss();
     }
 }

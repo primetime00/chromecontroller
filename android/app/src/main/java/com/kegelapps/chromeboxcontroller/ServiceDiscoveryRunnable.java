@@ -129,11 +129,11 @@ public class ServiceDiscoveryRunnable implements Runnable {
             @Override
             public void run() {
                 DeviceInfoProto.DeviceInfo dev = DeviceInfoProto.DeviceInfo.newBuilder().setName("Test").setIp("192.168.1.55").setMac("aa:bb:cc:dd:ee:ff").setPort(30015).build();
+                //processDevice(dev);
+                dev = DeviceInfoProto.DeviceInfo.newBuilder().setName("Your Work").setIp("10.1.213.162").setMac("aa:bb:cc:dd:ee:fc").setPort(30015).build();
                 processDevice(dev);
-                dev = DeviceInfoProto.DeviceInfo.newBuilder().setName("Work").setIp("192.168.1.7").setMac("aa:bb:cc:dd:ee:fc").setPort(30015).build();
-                processDevice(dev);
-                dev = DeviceInfoProto.DeviceInfo.newBuilder().setName("Home").setIp("192.168.1.22").setMac("aa:bb:cc:dd:ee:fe").setPort(30015).build();
-                processDevice(dev);
+                //dev = DeviceInfoProto.DeviceInfo.newBuilder().setName("Home").setIp("192.168.1.22").setMac("aa:bb:cc:dd:ee:fe").setPort(30015).build();
+                //processDevice(dev);
             }
         }, 3000);
 
@@ -141,6 +141,7 @@ public class ServiceDiscoveryRunnable implements Runnable {
 
     private void processDevice(DeviceInfoProto.DeviceInfo dev) {
         int dev_ip = UIHelpers.convertIp(dev.getIp());
+        dev = dev.toBuilder().setUserCreated(false).setFound(true).build();
         for (DeviceInfoProto.DeviceInfo current : mDeviceCache.getDevicesList()) {
             int current_ip = UIHelpers.convertIp(current.getIp());
             if (dev_ip == current_ip) //we already have this device
