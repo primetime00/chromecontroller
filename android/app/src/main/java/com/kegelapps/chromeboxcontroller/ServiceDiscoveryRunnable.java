@@ -36,7 +36,7 @@ public class ServiceDiscoveryRunnable implements Runnable {
     private Object mCacheLock = new Object();
     private boolean mComplete;
 
-    private int timeout = 10000;
+    private int timeout = 120000;
     private Context context;
 
     public ServiceDiscoveryRunnable(Context context, ControllerService.OnServiceDiscovery disc) {
