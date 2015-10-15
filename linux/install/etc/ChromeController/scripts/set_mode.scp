@@ -1,0 +1,27 @@
+info {
+	name: "Set Current Mode"
+	output_type: "text_popup"
+	visible: true
+	choice {
+		title: "Choose a mode"
+	    option: "Kodi"
+	    option: "Steam"
+	    option: "XBMCUbuntu"
+	}
+	post_command {
+		name: "Reboot"
+		condition: 0
+	}
+}
+#script
+#!/bin/sh
+USER=$(dbus-send --print-reply=literal --system --dest=org.freedesktop.Accounts /org/freedesktop/Accounts org.freedesktop.Accounts.FindUserById int64:1000)
+dbus-send --print-reply --system --dest=org.freedesktop.Accounts $USER org.freedesktop.Accounts.User.SetXSession string:$1 > /dev/null
+RES=$?
+if [ $RES -eq 0 ]; then
+	echo "Mode has been set to $1.  You must reboot now."
+else
+	echo "Mode could not be set."
+fi
+exit $RES
+

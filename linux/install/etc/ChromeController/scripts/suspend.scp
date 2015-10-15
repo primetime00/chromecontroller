@@ -1,0 +1,8 @@
+info {
+	name: "Suspend"
+	output_type: "none"
+	visible: true
+}
+#script
+#!/bin/sh
+pm-suspend

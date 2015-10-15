@@ -1,0 +1,3 @@
+#!/bin/sh
+update-rc.d chromeboxcontroller defaults
+service chromeboxcontroller start

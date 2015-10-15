@@ -13,6 +13,7 @@ public:
 	~rEngine();
 
 	int run();
+	void exit();
 
 	//debug test functions
 	void testPing(unsigned int);
@@ -44,6 +45,8 @@ private:
 	boost::shared_ptr<NetworkService> mService;
 	boost::shared_ptr<rProcessor> mProcessor;
 	boost::shared_ptr<rServer> mServer;
+
+	bool mKill;
 
 	vData mByteData;
 

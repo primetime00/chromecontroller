@@ -2,7 +2,7 @@
 #include <boost/shared_ptr.hpp>
 #include "ScriptCommand.pb.h"
 
-#define APP_NAME "RemoteServer"
+#define APP_NAME "ChromeController"
 
 class rScripts
 {

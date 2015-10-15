@@ -28,6 +28,7 @@ rEngine::~rEngine()
 
 int rEngine::run()
 {
+    mKill = false;
 	if (mIsServer)
 	{
 		mServer = boost::make_shared<rServer>(mService);
@@ -47,7 +48,7 @@ int rEngine::run()
 #ifdef __win32__
 	while (!_kbhit())
 #else
-	while (1)
+	while (!mKill)
 #endif
 	{
 		mService->Poll();
@@ -255,5 +256,10 @@ void rEngine::testCommand()
 	std::cout << "Sending command: " << cmd->name() << std::endl;
 	if (convertMessageToVectorData(ret))
 		mTestClient->Send(mByteData);
+}
+
+void rEngine::exit()
+{
+    mKill = true;
 }
 

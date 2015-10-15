@@ -1,3 +1,8 @@
+#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <signal.h>
+
 #include <iostream>
 #include <exception>
 #include <array>
@@ -41,15 +46,32 @@ void server(boost::shared_ptr<NetworkService> ns) {
 	server->AcceptConnection();
 }
 
+rEngine *engine = 0;
+
+// Define the function to be called when ctrl-c (SIGINT) signal is sent to process
+void signal_callback_handler(int signum)
+{
+   printf("Caught signal %d\n",signum);
+   if (engine != 0 && signum == SIGHUP) {
+       engine->exit();
+   }
+   // Terminate program
+//   exit(signum);
+}
+
 int main(int argc, char* argv[])
 {
-	rEngine *engine;
 	if (argc > 1 && std::string(argv[1]) == "client")
 		engine = new rEngine(false);
 	else
 		engine = new rEngine();
+    signal(SIGHUP, signal_callback_handler);
 	engine->run();
-
 }
+
+
+
+
+
 
 
