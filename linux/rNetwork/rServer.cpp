@@ -1,5 +1,5 @@
 #include "rServer.h"
-#include <iostream>
+#include <boost/log/trivial.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/bind.hpp>
@@ -11,7 +11,7 @@ boost::mutex global_stream_lock;
 bool rServer::OnAccept(boost::shared_ptr< NetworkConnection > connection, const std::string & host, uint16_t port)
 {
 	global_stream_lock.lock();
-	std::cout << "Accepted a new connection from " << host << ":" << port << std::endl;
+	BOOST_LOG_TRIVIAL(debug) << "Accepted a new connection from " << host << ":" << port ;
 	global_stream_lock.unlock();
     if (!m_connectFunction.empty())
     {
@@ -29,13 +29,13 @@ void rServer::OnTimer(const boost::posix_time::time_duration & delta)
 void rServer::OnError(const boost::system::error_code & error)
 {
 	global_stream_lock.lock();
-	std::cout << "rServer had an error: " << error << std::endl;
+	BOOST_LOG_TRIVIAL(debug) << "rServer had an error: " << error ;
 	global_stream_lock.unlock();
 }
 
 void rServer::OnClientDisconnect()
 {
-	boost::static_pointer_cast<rServer>(shared_from_this())->AcceptConnection();
+	GetStrand().post(boost::bind(&rServer::AcceptConnection, this));
 }
 
 rServer::rServer(boost::shared_ptr< NetworkService > service)
@@ -50,11 +50,25 @@ rServer::~rServer()
 void rServer::AcceptConnection()
 {
 	if (m_connection)
+	{
 		m_connection.reset();
+    }
 	m_connection = boost::make_shared<rConnection>(GetService());
 	m_connection->SetRecvFunction(m_recvFunction);
 	m_connection->SetConnectFunction(m_connectFunction);
 	Accept(m_connection);
+	BOOST_LOG_TRIVIAL(debug) << "ready to accept!" ;
+}
+
+void rServer::Shutdown()
+{
+    if (m_connection)
+    {
+        m_connection->Shutdown();
+    }
+    m_connection.reset();
+    ServerAcceptor::Shutdown();
+
 }
 
 void rConnection::OnAccept(const std::string & host, uint16_t port)
@@ -71,14 +85,14 @@ void rConnection::OnConnect(const std::string & host, uint16_t port)
 void rConnection::OnSend(const std::vector< uint8_t > & buffer)
 {
 	global_stream_lock.lock();
-	std::cout << "Sending data..." << std::endl;
+	BOOST_LOG_TRIVIAL(debug) << "Sending data..." ;
 	global_stream_lock.unlock();
 }
 
 void rConnection::OnRecv(std::vector< uint8_t > & buffer)
 {
 	global_stream_lock.lock();
-	std::cout << "Received " << buffer.size() << " of data..." << std::endl;
+	BOOST_LOG_TRIVIAL(debug) << "Received " << buffer.size() << " of data..." ;
 	global_stream_lock.unlock();
 
 	unsigned int packetSize;
@@ -109,6 +123,7 @@ void rConnection::OnRecv(std::vector< uint8_t > & buffer)
 
 void rConnection::OnTimer(const boost::posix_time::time_duration & delta)
 {
+    BOOST_LOG_TRIVIAL(debug) << "TIME" ;
 	if (CheckTimeout())
 		Disconnect();
 	for (auto i : m_timers)
@@ -126,8 +141,8 @@ void rConnection::OnTimer(const boost::posix_time::time_duration & delta)
 void rConnection::OnError(const boost::system::error_code & error)
 {
 	global_stream_lock.lock();
-	std::cout << "rConnection had an error: " << error << std::endl;
-	std::cout << "Disconnecting!" << std::endl;
+	BOOST_LOG_TRIVIAL(debug) << "rConnection had an error: " << error ;
+	BOOST_LOG_TRIVIAL(debug) << "Disconnecting!" ;
 	global_stream_lock.unlock();
 	Disconnect();
 }
@@ -135,7 +150,7 @@ void rConnection::OnError(const boost::system::error_code & error)
 void rConnection::OnDisconnect()
 {
 	global_stream_lock.lock();
-	std::cout << "Connection disconnected!" << std::endl;
+	BOOST_LOG_TRIVIAL(debug) << "Connection disconnected!" ;
 	global_stream_lock.unlock();
 }
 
@@ -154,7 +169,7 @@ bool rConnection::CheckTimeout() {
 	if ( (tm - m_last_ping_time).total_seconds() > GetTimeoutSeconds())
 	{
 		global_stream_lock.lock();
-		std::cout << GetTimeoutSeconds() << " seconds have passed.  assuming client disconnected!" << std::endl;
+		BOOST_LOG_TRIVIAL(debug) << GetTimeoutSeconds() << " seconds have passed.  assuming client disconnected!" ;
 		global_stream_lock.unlock();
 		return true;
 	}
@@ -198,6 +213,11 @@ void rConnection::RemoveTimerTimeout(std::string name)
 {
 	auto _this = boost::static_pointer_cast<rConnection>(shared_from_this());
 	GetStrand().post(boost::bind(&rConnection::removeTimerTimeout, _this, name));
+}
+
+void rConnection::Shutdown()
+{
+    NetworkConnection::Shutdown();
 }
 
 

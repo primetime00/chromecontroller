@@ -1,5 +1,5 @@
 #include "rTestClient.h"
-#include <iostream>
+#include <boost/log/trivial.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/bind.hpp>
@@ -27,7 +27,7 @@ void rTestClient::OnConnect(const std::string & host, uint16_t port)
 void rTestClient::OnSend(const std::vector< uint8_t > & buffer)
 {
 	client_global_stream_lock.lock();
-	std::cout << "Sending data..." << std::endl;
+	BOOST_LOG_TRIVIAL(debug) << "Sending data..." ;
 	client_global_stream_lock.unlock();
 }
 
@@ -35,7 +35,7 @@ void rTestClient::OnRecv(std::vector< uint8_t > & buffer)
 {
 	ResetTimeoutTimer();
 	client_global_stream_lock.lock();
-	std::cout << "Received " << buffer.size() << " of data..." << std::endl;
+	BOOST_LOG_TRIVIAL(debug) << "Received " << buffer.size() << " of data..." ;
 	client_global_stream_lock.unlock();
 
 	while (buffer.size() > 4)
@@ -46,31 +46,31 @@ void rTestClient::OnRecv(std::vector< uint8_t > & buffer)
 
 		client_global_stream_lock.lock();
 		if (msg->has_pong())
-			std::cout << "Message is a pong!" << std::endl;
+			BOOST_LOG_TRIVIAL(debug) << "Message is a pong!" ;
 		if (msg->has_deviceinfo())
 		{
-			std::cout << "Message is a device info!" << std::endl;
-			std::cout << "IP: " << msg->deviceinfo().ip() << std::endl;
-			std::cout << "MAC: " << msg->deviceinfo().mac() << std::endl;
+			BOOST_LOG_TRIVIAL(debug) << "Message is a device info!" ;
+			BOOST_LOG_TRIVIAL(debug) << "IP: " << msg->deviceinfo().ip() ;
+			BOOST_LOG_TRIVIAL(debug) << "MAC: " << msg->deviceinfo().mac() ;
 			if (msg->deviceinfo().has_name())
-				std::cout << "Name: " << msg->deviceinfo().name() << std::endl;
+				BOOST_LOG_TRIVIAL(debug) << "Name: " << msg->deviceinfo().name() ;
 		}
 		if (msg->has_command())
 		{
-			std::cout << "Ran command [" << msg->command().name() << "]" << std::endl;
+			BOOST_LOG_TRIVIAL(debug) << "Ran command [" << msg->command().name() << "]" ;
 			if (msg->command().run_failed())
-                std::cout << "This command failed to run on the server!" << std::endl;
+                BOOST_LOG_TRIVIAL(debug) << "This command failed to run on the server!" ;
             else
             {
                 if (msg->command().has_return_data() && msg->command().return_data().length() > 0)
-                    std::cout << "Output data:\n" << msg->command().return_data() << std::endl;
+                    BOOST_LOG_TRIVIAL(debug) << "Output data:\n" << msg->command().return_data() ;
                 if (msg->command().has_return_value())
-                    std::cout << "Return value: " << msg->command().return_value() << std::endl;
+                    BOOST_LOG_TRIVIAL(debug) << "Return value: " << msg->command().return_value() ;
             }
 		}
 		if (msg->has_commandlist())
 		{
-            std::cout << "Received command list that has " << msg->commandlist().scripts_size() << " commands." << std::endl;
+            BOOST_LOG_TRIVIAL(debug) << "Received command list that has " << msg->commandlist().scripts_size() << " commands." ;
 		}
 		client_global_stream_lock.unlock();
 
@@ -88,7 +88,7 @@ void rTestClient::OnTimer(const boost::posix_time::time_duration & delta)
 {
 	if (CheckTimeout())
 	{
-		std::cout << "client disconnect due to inactivity" << std::endl;
+		BOOST_LOG_TRIVIAL(debug) << "client disconnect due to inactivity" ;
 		Disconnect();
 	}
 	if (isConnected)
@@ -109,14 +109,14 @@ void rTestClient::OnTimer(const boost::posix_time::time_duration & delta)
 void rTestClient::OnError(const boost::system::error_code & error)
 {
 	client_global_stream_lock.lock();
-	std::cout << "rTestClient had an error " << error << std::endl;
+	BOOST_LOG_TRIVIAL(debug) << "rTestClient had an error " << error ;
 	client_global_stream_lock.unlock();
 }
 
 void rTestClient::OnDisconnect()
 {
 	client_global_stream_lock.lock();
-	std::cout << "Connection disconnected!" << std::endl;
+	BOOST_LOG_TRIVIAL(debug) << "Connection disconnected!" ;
 	client_global_stream_lock.unlock();
 }
 
@@ -129,7 +129,7 @@ bool rTestClient::CheckTimeout() {
 	if ( (tm - m_last_ping_time).total_seconds() > GetTimeoutSeconds())
 	{
 		client_global_stream_lock.lock();
-		std::cout << GetTimeoutSeconds() << " seconds have passed.  assuming client disconnected!" << std::endl;
+		BOOST_LOG_TRIVIAL(debug) << GetTimeoutSeconds() << " seconds have passed.  assuming client disconnected!" ;
 		client_global_stream_lock.unlock();
 		return true;
 	}

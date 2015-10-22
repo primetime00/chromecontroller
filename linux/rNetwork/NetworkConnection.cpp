@@ -2,6 +2,7 @@
 #include <boost/bind.hpp>
 #include <boost/interprocess/detail/atomic.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/log/trivial.hpp>
 
 NetworkConnection::NetworkConnection(boost::shared_ptr< NetworkService > service)
 	: m_service(service), m_socket(service->GetService()), m_io_strand(service->GetService()), m_timer(service->GetService()), m_receive_buffer_size(4096), m_timer_interval(1000), m_error_state(0)
@@ -10,6 +11,7 @@ NetworkConnection::NetworkConnection(boost::shared_ptr< NetworkService > service
 
 NetworkConnection::~NetworkConnection()
 {
+    BOOST_LOG_TRIVIAL(debug) << "Killed the instance!\n";
 }
 
 void NetworkConnection::Bind(const std::string & ip, uint16_t port)
@@ -19,6 +21,7 @@ void NetworkConnection::Bind(const std::string & ip, uint16_t port)
 	m_socket.set_option(boost::asio::ip::tcp::acceptor::reuse_address(false));
 	m_socket.bind(endpoint);
 }
+
 
 void NetworkConnection::StartSend()
 {
@@ -65,15 +68,21 @@ void NetworkConnection::StartError(const boost::system::error_code & error)
 void NetworkConnection::StartDisconnect()
 {
 	boost::system::error_code ec;
+	BOOST_LOG_TRIVIAL(debug) << "killing socket and timer" ;
+	m_timer.wait();
+	m_timer.cancel();
+	m_socket.cancel();
 	m_socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
 	m_socket.close(ec);
+	BOOST_LOG_TRIVIAL(debug) << "shutdown and closed socket!" ;
 }
 
 void NetworkConnection::HandleConnect(const boost::system::error_code & error)
 {
 	if (error || HasError() || m_service->HasStopped())
 	{
-		StartError(error);
+        if (m_socket.is_open())
+            StartError(error);
 	}
 	else
 	{
@@ -92,7 +101,10 @@ void NetworkConnection::HandleSend(const boost::system::error_code &  error, std
 {
 	if (error || HasError() || m_service->HasStopped())
 	{
-		StartError(error);
+        if (m_socket.is_open())
+        {
+            StartError(error);
+        }
 	}
 	else
 	{
@@ -106,7 +118,16 @@ void NetworkConnection::HandleRecv(const boost::system::error_code & error, int3
 {
 	if (error || HasError() || m_service->HasStopped())
 	{
-		StartError(error);
+        if (m_socket.is_open())
+        {
+            if (error == boost::asio::error::eof) //we got disconnected on the client side
+            {
+                OnError(error);
+                //Disconnect();
+            }
+            else
+                StartError(error);
+        }
 	}
 	else
 	{
@@ -122,9 +143,17 @@ void NetworkConnection::HandleRecv(const boost::system::error_code & error, int3
 
 void NetworkConnection::HandleTimer(const boost::system::error_code & error)
 {
+    if (!m_socket.is_open()) //socket disconnected
+    {
+		if (!m_disconnect_callback.empty())
+			m_disconnect_callback();
+        return;
+    }
+
 	if (error || HasError() || m_service->HasStopped())
 	{
-		StartError(error);
+        if (error != boost::asio::error::operation_aborted)
+            StartError(error);
 	}
 	else
 	{
@@ -135,14 +164,13 @@ void NetworkConnection::HandleTimer(const boost::system::error_code & error)
 
 void NetworkConnection::HandleDisconnect(const boost::system::error_code & error)
 {
-	if (error == boost::asio::error::connection_reset) 
+	if (error == boost::asio::error::connection_reset)
 	{
-		if (!m_disconnect_callback.empty())
-			GetStrand().post(m_disconnect_callback);
 		StartDisconnect();
 		OnDisconnect();
+
 	}
-	else 
+	else
 	{
 		StartError(error);
 	}
@@ -241,4 +269,12 @@ void NetworkConnection::SetTimerInterval(int32_t timer_interval)
 bool NetworkConnection::HasError()
 {
 	return (boost::interprocess::ipcdetail::atomic_cas32(&m_error_state, 1, 1) == 1);
+}
+
+void NetworkConnection::Shutdown()
+{
+    if (m_socket.is_open())
+    {
+        StartDisconnect();
+    }
 }

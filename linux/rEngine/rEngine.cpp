@@ -1,4 +1,4 @@
-#include <iostream>
+#include <boost/log/trivial.hpp>
 #include "rEngine.h"
 #include "../rNetwork/rTestClient.h"
 #include <boost/bind.hpp>
@@ -34,7 +34,7 @@ int rEngine::run()
 		mServer = boost::make_shared<rServer>(mService);
 		if (!createServer())
 		{
-			std::cout << "Could not create Remote server! (No mac or ip address found)" << std::endl;
+			BOOST_LOG_TRIVIAL(debug) << "Could not create Remote server! (No mac or ip address found)" ;
 			mService->Stop();
 			return 1;
 		}
@@ -58,6 +58,7 @@ int rEngine::run()
 		::usleep(500000);
 #endif
 	}
+    mServer->Shutdown();
 	mService->Stop();
 
 	return 0;
@@ -69,7 +70,7 @@ bool rEngine::createServer()
 	std::string mac, ip;
 	netinfo::getIfInfo(mac, ip);
 	if (mac.length() == 0 || ip.length() == 0)
-		return false;
+		netinfo::waitForIP(mac, ip);
 
     mScripts = boost::make_shared<rScripts>();
 
@@ -92,7 +93,7 @@ bool rEngine::createServer()
 	mServer->SetRecvFunction(boost::bind(&rEngine::dataReceived, this, _1, _2));
 	mServer->SetConnectFunction(boost::bind(&rEngine::connectionEstablished, this));
 	mServer->AcceptConnection();
-	std::cout << "Created Engine with IP and MAC " << ip << " " << mac << std::endl;
+	BOOST_LOG_TRIVIAL(debug) << "Created Engine with IP and MAC " << ip << " " << mac ;
 	return true;
 }
 
@@ -149,7 +150,7 @@ void rEngine::onPing(rMessage data)
 	auto ret = mProcessor->createMessage();
 	ret->set_allocated_pong(pong);
 
-	std::cout << "Got a ping with id " << data->ping().id() <<", sending a pong" << std::endl;
+	BOOST_LOG_TRIVIAL(debug) << "Got a ping with id " << data->ping().id() <<", sending a pong" ;
 	if (convertMessageToVectorData(ret))
 		mServer->GetConnection()->Send(mByteData);
 }
@@ -158,8 +159,8 @@ void rEngine::onInfoRequest(rMessage data)
 {
 	auto ret = mProcessor->createMessage();
 	ret->set_allocated_deviceinfo(populateDeviceInfo());
-	std::cout << "Got a device info request with id " << (data->has_id() ?  (int)data->inforequest().id() : 0) <<", sending device info" << std::endl;
-	std::cout << "Device name: " << ret->deviceinfo().name() << std::endl;
+	BOOST_LOG_TRIVIAL(debug) << "Got a device info request with id " << (data->has_id() ?  (int)data->inforequest().id() : 0) <<", sending device info" ;
+	BOOST_LOG_TRIVIAL(debug) << "Device name: " << ret->deviceinfo().name() ;
 	if (convertMessageToVectorData(ret))
 		mServer->GetConnection()->Send(mByteData);
 }
@@ -169,7 +170,7 @@ void rEngine::onInfoSet(rMessage data)
 	setDeviceInfomation(data->infoset());
 	auto ret = mProcessor->createMessage();
 	ret->set_allocated_deviceinfo(populateDeviceInfo());
-	std::cout << "Got a device info set with id " << (data->has_id() ?  (int)data->inforequest().id() : 0) <<", sending device info" << std::endl;
+	BOOST_LOG_TRIVIAL(debug) << "Got a device info set with id " << (data->has_id() ?  (int)data->inforequest().id() : 0) <<", sending device info" ;
 	if (convertMessageToVectorData(ret))
 		mServer->GetConnection()->Send(mByteData);
 }
@@ -180,7 +181,7 @@ void rEngine::onCommand(rMessage data)
     auto ret = mProcessor->createMessage();
     mScripts->runScript(*s);
     ret->set_allocated_command(s);
-    std::cout << "script type: " << s->output_type() << std::endl;
+    BOOST_LOG_TRIVIAL(debug) << "script type: " << s->output_type() ;
 	if (convertMessageToVectorData(ret))
 		mServer->GetConnection()->Send(mByteData);
 }
@@ -218,7 +219,7 @@ void rEngine::testPing(unsigned int id)
 	ping->set_id(id);
 	auto ret = mProcessor->createMessage(64);
 	ret->set_allocated_ping(ping);
-	std::cout << "Sending a ping with id " << id << std::endl;
+	BOOST_LOG_TRIVIAL(debug) << "Sending a ping with id " << id ;
 	if (convertMessageToVectorData(ret))
 		mTestClient->Send(mByteData);
 }
@@ -229,7 +230,7 @@ void rEngine::testInfoRequest(unsigned int id)
 	request->set_id(id);
 	auto ret = mProcessor->createMessage(67);
 	ret->set_allocated_inforequest(request);
-	std::cout << "Sending info request with id " << id << std::endl;
+	BOOST_LOG_TRIVIAL(debug) << "Sending info request with id " << id ;
 	if (convertMessageToVectorData(ret))
 		mTestClient->Send(mByteData);
 }
@@ -242,7 +243,7 @@ void rEngine::testInfoSet(unsigned int id)
 	infoset->set_location("Bathroom");
 	auto ret = mProcessor->createMessage(99);
 	ret->set_allocated_infoset(infoset);
-	std::cout << "Sending info set with id " << id << std::endl;
+	BOOST_LOG_TRIVIAL(debug) << "Sending info set with id " << id ;
 	if (convertMessageToVectorData(ret))
 		mTestClient->Send(mByteData);
 }
@@ -253,7 +254,7 @@ void rEngine::testCommand()
 	cmd->set_name("Process Lister");
 	auto ret = mProcessor->createMessage(33);
 	ret->set_allocated_command(cmd);
-	std::cout << "Sending command: " << cmd->name() << std::endl;
+	BOOST_LOG_TRIVIAL(debug) << "Sending command: " << cmd->name() ;
 	if (convertMessageToVectorData(ret))
 		mTestClient->Send(mByteData);
 }

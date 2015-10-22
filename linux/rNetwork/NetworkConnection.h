@@ -58,7 +58,7 @@ private:
 	// Called when data has been sent by the connection.
 	virtual void OnSend(const std::vector< uint8_t > & buffer) = 0;
 
-	// Called when data has been received by the connection. 
+	// Called when data has been received by the connection.
 	virtual void OnRecv(std::vector< uint8_t > & buffer) = 0;
 
 	// Called on each timer event.
@@ -80,9 +80,9 @@ public:
 	// Returns the strand object.
 	boost::asio::strand & GetStrand();
 
-	// Sets the application specific receive buffer size used. For stream 
-	// based protocols such as HTTP, you want this to be pretty large, like 
-	// 64kb. For packet based protocols, then it will be much smaller, 
+	// Sets the application specific receive buffer size used. For stream
+	// based protocols such as HTTP, you want this to be pretty large, like
+	// 64kb. For packet based protocols, then it will be much smaller,
 	// usually 512b - 8kb depending on the protocol. The default value is
 	// 4kb.
 	void SetReceiveBufferSize(int32_t size);
@@ -90,7 +90,7 @@ public:
 	// Returns the size of the receive buffer size of the current object.
 	int32_t GetReceiveBufferSize() const;
 
-	// Sets the timer interval of the object. The interval is changed after 
+	// Sets the timer interval of the object. The interval is changed after
 	// the next update is called.
 	void SetTimerInterval(int32_t timer_interval_ms);
 
@@ -109,8 +109,8 @@ public:
 	// Posts data to be sent to the connection.
 	void Send(const std::vector< uint8_t > & buffer);
 
-	// Posts a recv for the connection to process. If total_bytes is 0, then 
-	// as many bytes as possible up to GetReceiveBufferSize() will be 
+	// Posts a recv for the connection to process. If total_bytes is 0, then
+	// as many bytes as possible up to GetReceiveBufferSize() will be
 	// waited for. If Recv is not 0, then the connection will wait for exactly
 	// total_bytes before invoking OnRecv.
 	void Recv(int32_t total_bytes = 0);
@@ -119,4 +119,6 @@ public:
 	void Disconnect();
 
 	void SetDisconnectCallback(boost::function<void()> func);
+
+	virtual void Shutdown();
 };

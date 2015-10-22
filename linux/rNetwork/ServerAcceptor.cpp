@@ -3,7 +3,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/bind.hpp>
 #include <boost/interprocess/detail/atomic.hpp>
-#include <iostream>
+#include <boost/log/trivial.hpp>
 
 ServerAcceptor::ServerAcceptor(boost::shared_ptr< NetworkService > service)
 	: m_service(service), m_acceptor(service->GetService()), m_io_strand(service->GetService()), m_timer(service->GetService()), m_timer_interval(1000), m_error_state(0)
@@ -21,15 +21,22 @@ void ServerAcceptor::StartTimer()
 	m_timer.async_wait(m_io_strand.wrap(boost::bind(&ServerAcceptor::HandleTimer, shared_from_this(), _1)));
 }
 
+void ServerAcceptor::Shutdown()
+{
+    boost::system::error_code ec;
+    m_acceptor.cancel(ec);
+    m_acceptor.close(ec);
+    m_timer.cancel(ec);
+    BOOST_LOG_TRIVIAL(debug) << "Shut down acceptor" ;
+}
+
 void ServerAcceptor::StartError(const boost::system::error_code & error)
 {
 	if (boost::interprocess::ipcdetail::atomic_cas32(&m_error_state, 1, 0) == 0)
 	{
-		boost::system::error_code ec;
-		m_acceptor.cancel(ec);
-		m_acceptor.close(ec);
-		m_timer.cancel(ec);
-		OnError(error);
+        Shutdown();
+        if (error != boost::asio::error::connection_reset)
+            OnError(error);
 	}
 }
 
@@ -42,7 +49,8 @@ void ServerAcceptor::HandleTimer(const boost::system::error_code & error)
 {
 	if (error || HasError() || m_service->HasStopped())
 	{
-		StartError(error);
+        if (error != boost::asio::error::operation_aborted)
+            StartError(error);
 	}
 	else
 	{
@@ -55,7 +63,8 @@ void ServerAcceptor::HandleAccept(const boost::system::error_code & error, boost
 {
 	if (error || HasError() || m_service->HasStopped())
 	{
-		connection->StartError(error);
+        if (connection->GetSocket().is_open())
+            connection->StartError(error);
 	}
 	else
 	{
@@ -70,7 +79,10 @@ void ServerAcceptor::HandleAccept(const boost::system::error_code & error, boost
 		}
 		else
 		{
-			StartError(error);
+            if (m_acceptor.is_open())
+            {
+                StartError(error);
+            }
 		}
 	}
 }

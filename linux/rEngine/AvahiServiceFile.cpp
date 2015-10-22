@@ -1,7 +1,7 @@
 #include "AvahiServiceFile.h"
 #include "boost/regex.hpp"
 #include "boost/algorithm/string.hpp"
-#include <iostream>
+#include <boost/log/trivial.hpp>
 #include <sstream>
 #include <fstream>
 

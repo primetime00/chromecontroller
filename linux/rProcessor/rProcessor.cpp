@@ -1,4 +1,4 @@
-#include <iostream>
+#include <boost/log/trivial.hpp>
 #include "rProcessor.h"
 #include "Keys.h"
 
@@ -17,7 +17,7 @@ void rProcessor::insertPacket(sData data)
 	auto m = rMessage(new rProtos::Message());
 	if (!m->ParseFromArray(data->data(), data->size()))
 	{
-		std::cout << "Failed to parse a packet!" << std::endl;
+		BOOST_LOG_TRIVIAL(debug) << "Failed to parse a packet!" ;
 		return;
 	}
 	if (m->has_ping())

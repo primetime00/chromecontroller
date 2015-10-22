@@ -39,10 +39,10 @@ protected:
 	std::shared_ptr<Derived> shared_from_base();
 
 private:
-	// Called when a connection has connected to the server. This function 
-	// should return true to invoke the connection's OnAccept function if the 
-	// connection will be kept. If the connection will not be kept, the 
-	// connection's Disconnect function should be called and the function 
+	// Called when a connection has connected to the server. This function
+	// should return true to invoke the connection's OnAccept function if the
+	// connection will be kept. If the connection will not be kept, the
+	// connection's Disconnect function should be called and the function
 	// should return false.
 	virtual bool OnAccept(boost::shared_ptr< NetworkConnection > connection, const std::string & host, uint16_t port) = 0;
 
@@ -50,7 +50,7 @@ private:
 	virtual void OnTimer(const boost::posix_time::time_duration & delta) = 0;
 
 	// Called when an error is encountered. Most typically, this is when the
-	// ServerAcceptor is being closed via the Stop function or if the Listen is 
+	// ServerAcceptor is being closed via the Stop function or if the Listen is
 	// called on an address that is not available.
 	virtual void OnError(const boost::system::error_code & error) = 0;
 
@@ -67,7 +67,7 @@ public:
 	// Returns the strand object.
 	boost::asio::strand & GetStrand();
 
-	// Sets the timer interval of the object. The interval is changed after 
+	// Sets the timer interval of the object. The interval is changed after
 	// the next update is called. The default value is 1000 ms.
 	void SetTimerInterval(int32_t timer_interval_ms);
 
@@ -88,5 +88,7 @@ public:
 
 	// Stop the ServerAcceptor from listening.
 	void Stop();
+
+	virtual void Shutdown();
 };
 

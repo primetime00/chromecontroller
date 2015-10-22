@@ -47,6 +47,7 @@ public:
 	void AcceptConnection();
 	void SetRecvFunction(boost::function<int(rConnection*, boost::shared_ptr<std::vector<uint8_t>>)> f) { m_recvFunction = f; }
 	void SetConnectFunction(boost::function<int()> f) { m_connectFunction = f; }
+	void Shutdown();
 	rConnectionPtr GetConnection() { return m_connection; }
 
 };
@@ -93,6 +94,7 @@ public:
 		m_recvFunction = f;
 	}
     void SetConnectFunction(boost::function<int()> f) { m_connectFunction = f; }
+    void Shutdown();
 
 
 

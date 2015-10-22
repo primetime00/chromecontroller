@@ -1,6 +1,6 @@
 #include "Scripts.h"
 
-#include <iostream>
+#include <boost/log/trivial.hpp>
 #include "google/protobuf/text_format.h"
 #include <fstream>
 #include "boost/algorithm/string.hpp"
@@ -39,28 +39,28 @@ void rScripts::readScripts()
         {
             if (it->path().extension().string().compare(".scp") == 0)
             {
-                std::cout << "found file " << (it->path().string()) << std::endl;
+                BOOST_LOG_TRIVIAL(debug) << "found file " << (it->path().string()) ;
                 boost::shared_ptr<rProtos::ScriptCommand> cmd(new rProtos::ScriptCommand());
                 std::ifstream v(it->path().string());
                 if (v.is_open())
                 {
                     std::string data(std::istreambuf_iterator<char>(v), (std::istreambuf_iterator<char>()));
-                    google::protobuf::TextFormat::ParseFromString(data, cmd.get());
                     auto pos = data.find("#script");
                     if (pos == std::string::npos)
                     {
-                        std::cout << "Error parsing script: " << it->path().string() << std::endl;
+                        BOOST_LOG_TRIVIAL(debug) << "Error parsing script: " << it->path().string() ;
                         continue;
                     }
-                    else
-                    {
-                        data = data.substr(pos+std::string("#script").size());
-                        boost::algorithm::trim_left(data);
-                        cmd->set_script(data);
-                        auto script = scripts->add_scripts();
-                        script->mutable_info()->CopyFrom(cmd->info());
-                        script->set_script(cmd->script());
-                    }
+                    std::string protoData(data.begin(), data.begin()+pos);
+
+                    google::protobuf::TextFormat::ParseFromString(protoData, cmd.get());
+
+                    data = data.substr(pos+std::string("#script").size());
+                    boost::algorithm::trim_left(data);
+                    cmd->set_script(data);
+                    auto script = scripts->add_scripts();
+                    script->mutable_info()->CopyFrom(cmd->info());
+                    script->set_script(cmd->script());
                 }
             }
         }
@@ -92,7 +92,7 @@ bool rScripts::runScript(rProtos::ScriptInfo &info)
     std::string output="";
     bool res = writeScript(info);
     if (res == false) {
-        std::cout << "Could not write the script file!";
+        BOOST_LOG_TRIVIAL(debug) << "Could not write the script file!";
         info.set_run_failed(true);
         return false;
     }
@@ -105,7 +105,7 @@ bool rScripts::runScript(rProtos::ScriptInfo &info)
     FILE *f = popen(ss.str().c_str(), "r");
     if (f == 0)
     {
-        std::cout << "Could not execute remote script!";
+        BOOST_LOG_TRIVIAL(debug) << "Could not execute remote script!";
         info.set_run_failed(true);
         return false;
     }
@@ -123,8 +123,8 @@ bool rScripts::runScript(rProtos::ScriptInfo &info)
     info.set_return_value(exit_code);
     if (exit_code == 127) //command was not found
         info.set_run_failed(true);
-    std::cout << "returns:\n" << output << std::endl;
-    std::cout << "code:\n" << exit_code << std::endl;
+    BOOST_LOG_TRIVIAL(debug) << "returns:\n" << output ;
+    BOOST_LOG_TRIVIAL(debug) << "code:\n" << exit_code ;
     return true;
 }
 
