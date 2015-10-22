@@ -20,6 +20,7 @@ message ScriptInfo {
 message ScriptChoice {
     required string title = 1;
     repeated string option = 2;
+    optional string option_script = 3;
 }
 
 message PostCommand {

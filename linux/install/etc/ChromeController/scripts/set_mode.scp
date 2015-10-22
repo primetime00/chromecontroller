@@ -4,9 +4,7 @@ info {
 	visible: true
 	choice {
 		title: "Choose a mode"
-	    option: "Kodi"
-	    option: "Steam"
-	    option: "XBMCUbuntu"
+		option_script: "Get Available Modes" 
 	}
 	post_command {
 		name: "Reboot"

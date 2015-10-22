@@ -4,6 +4,8 @@
 
 #define APP_NAME "ChromeController"
 
+typedef boost::shared_ptr<rProtos::ScriptCommand> ScriptCommandPtr;
+
 class rScripts
 {
 public:
@@ -22,6 +24,7 @@ public:
 private:
     void readScripts();
     bool writeScript(const rProtos::ScriptInfo &);
+    void postProcessScript(rProtos::ScriptCommand *);
 
     boost::shared_ptr<rProtos::ScriptCommandList> scripts;
 

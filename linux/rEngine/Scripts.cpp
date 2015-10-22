@@ -40,7 +40,7 @@ void rScripts::readScripts()
             if (it->path().extension().string().compare(".scp") == 0)
             {
                 BOOST_LOG_TRIVIAL(debug) << "found file " << (it->path().string()) ;
-                boost::shared_ptr<rProtos::ScriptCommand> cmd(new rProtos::ScriptCommand());
+                ScriptCommandPtr cmd(new rProtos::ScriptCommand());
                 std::ifstream v(it->path().string());
                 if (v.is_open())
                 {
@@ -62,6 +62,37 @@ void rScripts::readScripts()
                     script->mutable_info()->CopyFrom(cmd->info());
                     script->set_script(cmd->script());
                 }
+            }
+        }
+    }
+    auto start = scripts->mutable_scripts()->pointer_begin();
+    auto end = scripts->mutable_scripts()->pointer_end();
+    for (auto it = start; it != end; ++it)
+        postProcessScript(*it);
+}
+
+void rScripts::postProcessScript(rProtos::ScriptCommand *cmd)
+{
+    rProtos::ScriptInfo *info = cmd->mutable_info();
+
+    //check for choice scripts
+    if (info->has_choice())
+    {
+        rProtos::ScriptChoice *choice = info->mutable_choice();
+        if (choice->has_option_script())
+        {
+            std::string option_script = choice->option_script();
+            rProtos::ScriptInfo cpInfo;
+            cpInfo.CopyFrom(*getScriptInfo(option_script));
+            runScript( cpInfo );
+            if (!cpInfo.run_failed() && cpInfo.has_return_data())
+            {
+                std::string result = cpInfo.return_data();
+                std::vector<std::string> option_list;
+                boost::algorithm::trim(result);
+                boost::split(option_list, result, boost::is_any_of("\n"), boost::token_compress_on);
+                for (auto val : option_list)
+                    choice->add_option(val);
             }
         }
     }

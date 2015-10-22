@@ -1,0 +1,8 @@
+info {
+	name: "Get Available Modes"
+	output_type: "list"
+	visible: false
+}
+#script
+#!/bin/sh
+ls -1a /usr/share/xsessions/*.desktop | xargs -n1 basename | sed "s/.desktop//g"
