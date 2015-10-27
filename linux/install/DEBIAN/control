@@ -1,9 +1,9 @@
 Package: ChromeController
-Version: 1.0-5
+Version: 1.0-7
 Section: base
 Priority: optional
 Architecture: all
-Depends: bash (>= 2.05a-11), awk, coreutils (>= 5.0-5), avahi-daemon (>= 0.6.31)
+Depends: bash (>= 2.05a-11), awk, coreutils (>= 5.0-5), avahi-daemon (>= 0.6.31), sed (>= 4.2.2)
 Maintainer: Ryan Kegel <ryan,kegel@gmail.com>
 Description: Linux Remote Operation
  This executable acts as a server for ChromeBox Controller.

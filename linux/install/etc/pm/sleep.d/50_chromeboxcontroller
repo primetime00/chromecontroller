@@ -1,0 +1,13 @@
+#! /bin/sh
+
+# ChromeBox Controller daemon suspend/resume
+
+case $1 in
+     suspend|suspend_hybrid|hibernate)
+    service chromeboxcontroller stop
+        ;;
+     resume|thaw)
+    service chromeboxcontroller restart
+        ;;
+esac
+

@@ -114,7 +114,7 @@ void ServerAcceptor::Listen(const std::string & host, const uint16_t & port)
 	else
 		endpoint = boost::asio::ip::tcp::endpoint(boost::asio::ip::address_v4::any(), port);
 	m_acceptor.open(endpoint.protocol());
-	m_acceptor.set_option(boost::asio::ip::tcp::acceptor::reuse_address(false));
+	m_acceptor.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
 	m_acceptor.bind(endpoint);
 	m_acceptor.listen(boost::asio::socket_base::max_connections);
 	StartTimer();

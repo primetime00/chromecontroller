@@ -15,6 +15,17 @@
 
 namespace netinfo
 {
+    bool localHost = false;
+    void useLocal(bool val)
+    {
+        localHost = true;
+    }
+
+    bool isLocalHost()
+    {
+        return localHost;
+    }
+
 	void getIfInfo(std::string &macAddr, std::string &ip_address)
 	{
 		std::string data;
@@ -22,6 +33,13 @@ namespace netinfo
 		std::string if_name = "";
 		macAddr = "";
 		std::ifstream macFile;
+		if (localHost)
+		{
+            macAddr = "aa:bb:cc:dd:ee:ff";
+            ip_address = "127.0.0.1";
+            return;
+		}
+
 		FILE *fp = popen("ip addr show scope global", "r");
 		if (fp)
 		{

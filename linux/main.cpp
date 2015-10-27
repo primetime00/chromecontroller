@@ -17,6 +17,8 @@
 #include "rProcessor/rProcessor.h"
 #include "rProcessor/Keys.h"
 
+#include "rEngine/NetInfo.h"
+
 #include <boost/make_shared.hpp>
 
 #include <boost/log/trivial.hpp>
@@ -76,6 +78,8 @@ int main(int argc, char* argv[])
         boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::debug);
     if (std::find(argList.begin(), argList.end(), std::string("-c")) != argList.end())
         server=false;
+    if (std::find(argList.begin(), argList.end(), std::string("-l")) != argList.end())
+        netinfo::useLocal(true);
 
     engine = new rEngine(server);
 

@@ -1,0 +1,14 @@
+package rProtos;
+
+option java_package = "com.kegelapps.chromeboxcontroller.proto";
+option java_outer_classname = "DisplayProto";
+
+message Display {
+	optional int64 id = 1;
+	enum DisplayMode {
+        DISPLAY_DEVICE_LIST = 0;
+        DISPLAY_DEVICE_INFO = 1;
+        DISPLAY_DEVICE_COMMANDS = 2;
+	}
+	required DisplayMode display_mode = 2;
+}

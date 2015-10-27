@@ -9,6 +9,7 @@ import "InfoRequest.proto";
 import "DeviceInfo.proto";
 import "InfoSet.proto";
 import "ScriptCommand.proto";
+import "Display.proto";
 
 message Message {
 	optional int64			id			= 1;
@@ -20,4 +21,5 @@ message Message {
 	optional InfoSet		infoSet		= 6;
 	optional ScriptInfo     command     = 7;
 	optional ScriptInfoList commandList = 8;
+	optional Display        display     = 9;
 }

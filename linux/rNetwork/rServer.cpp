@@ -35,11 +35,13 @@ void rServer::OnError(const boost::system::error_code & error)
 
 void rServer::OnClientDisconnect()
 {
+    if (m_serverShutdown)
+        return;
 	GetStrand().post(boost::bind(&rServer::AcceptConnection, this));
 }
 
 rServer::rServer(boost::shared_ptr< NetworkService > service)
-	: ServerAcceptor(service)
+	: ServerAcceptor(service), m_serverShutdown(false)
 {
 }
 
@@ -62,6 +64,7 @@ void rServer::AcceptConnection()
 
 void rServer::Shutdown()
 {
+    m_serverShutdown = true;
     if (m_connection)
     {
         m_connection->Shutdown();

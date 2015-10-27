@@ -40,6 +40,8 @@
 			<Add library="/home/ryan/Boost/boost_1_58_0/stage/lib/libboost_system.a" />
 			<Add library="/usr/local/lib/libprotobuf.a" />
 			<Add library="/home/ryan/Boost/boost_1_58_0/stage/lib/libboost_filesystem.a" />
+			<Add library="/home/ryan/Boost/boost_1_58_0/stage/lib/libboost_log.a" />
+			<Add library="/home/ryan/Boost/boost_1_58_0/stage/lib/libboost_thread.a" />
 		</Linker>
 		<Unit filename="../../../protobuf/DeviceInfo.proto" />
 		<Unit filename="../../../protobuf/InfoRequest.proto" />

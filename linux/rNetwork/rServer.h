@@ -34,6 +34,7 @@ private:
 	rConnectionPtr m_connection;
 	boost::function<int(rConnection*, boost::shared_ptr<std::vector<uint8_t>>)> m_recvFunction;
 	boost::function<int()> m_connectFunction;
+	bool m_serverShutdown;
 
 private:
 	bool OnAccept(boost::shared_ptr< NetworkConnection > connection, const std::string & host, uint16_t port);
