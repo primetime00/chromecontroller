@@ -58,6 +58,7 @@ public class ControllerService extends Service {
     private Object scriptLock = new Object();
     private Object resultLock = new Object();
 
+
     public interface OnMessage {
         void onMessage(Message msg, MessageProto.Message data);
 
@@ -189,6 +190,7 @@ public class ControllerService extends Service {
         }
         if (msg.hasCommandList()) { //we have commands
             storeDeviceCommands(msg.getCommandList());
+            Log.d("RYAN", "Stored latest settings!");
         }
         if (msg.hasCommand() && msg.getCommand().hasReturnValue()) {//we have some return data to store
             storeLastCommandResult(msg.getCommand());
@@ -369,6 +371,17 @@ public class ControllerService extends Service {
             return;
         mWakeRunnable.setDevice(dev);
         new Thread(mWakeRunnable).start();
+    }
+
+    public void requestConnectionState() {
+        if (mNetworkRunnable ==null || (mNetworkRunnable != null && !mNetworkRunnable.isActive())) {
+            Message serviceMsg = Message.obtain();
+            serviceMsg.what = MESSAGE_DISCONNECT_NETWORK;
+            Bundle b = new Bundle();
+            b.putString(MESSAGE_DISCONNECT_MESSAGE_KEY, "");
+            serviceMsg.setData(b);
+            sendUIMessage(serviceMsg);
+        }
     }
 
 

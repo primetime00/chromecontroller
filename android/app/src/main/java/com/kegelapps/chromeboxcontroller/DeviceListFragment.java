@@ -23,6 +23,7 @@ import android.widget.ListView;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.kegelapps.chromeboxcontroller.proto.DeviceInfoProto;
+import com.kegelapps.chromeboxcontroller.proto.DisplayProto;
 import com.kegelapps.chromeboxcontroller.proto.InfoSetProto;
 import com.kegelapps.chromeboxcontroller.proto.MessageProto;
 
@@ -253,6 +254,10 @@ public class DeviceListFragment extends Fragment implements UIHelpers.OnDeviceCo
                     case ControllerService.MESSAGE_WAKE_FAILED:
                         UIHelpers.showTextDialog(getActivity(), "Wake Failed", "Failed to wake device.\nPlease check device MAC.", null);
                         break;
+                    case ControllerService.MESSAGE_RECEIVED_MESSAGE:
+                        if (data.hasDisplay() && data.getDisplay().getDisplayMode() == DisplayProto.Display.DisplayMode.DISPLAY_DEVICE_INFO)
+                            openDeviceMenu(data.getDisplay().getDisplayMode());
+                        break;
                     default:
                         break;
                 }
@@ -290,10 +295,10 @@ public class DeviceListFragment extends Fragment implements UIHelpers.OnDeviceCo
         mAdapter.notifyDataSetChanged();
     }
 
-    private void openDeviceMenu() {
+    private void openDeviceMenu(DisplayProto.Display.DisplayMode displayMode) {
         FragmentOpener op = UIHelpers.findFragmentOpener(DeviceListFragment.this);
         if (op != null) {
-            op.openDeviceMenu();
+            op.openDeviceMenu(displayMode);
         }
     }
 
@@ -332,6 +337,8 @@ public class DeviceListFragment extends Fragment implements UIHelpers.OnDeviceCo
         mDeviceInfo = mActivity.getService().getDeviceInfo();
         mAdapter.setActiveDevice(-1);
         mAdapter.notifyDataSetChanged();
+        //// TODO: 10/26/2015
+        //wait until we get out command list and stuff before transitioning
         if (!mDeviceInfo.hasName()) { //it doesn't have a name, allow a name.
             UIHelpers.textEntry(getActivity(), "Name this device", null, new UIHelpers.OnDeviceTextEntry() {
                 @Override
@@ -343,7 +350,7 @@ public class DeviceListFragment extends Fragment implements UIHelpers.OnDeviceCo
                         mActivity.getService().sendNetworkMessage(msg);
                         if (!mDeviceInfo.getUserCreated()) //this is not a user created device, so we add it to the 'seen' devices
                             addSeenDevice(mDeviceInfo);
-                        openDeviceMenu();
+                        //openDeviceMenu();
                     }
                 }
 
@@ -358,7 +365,7 @@ public class DeviceListFragment extends Fragment implements UIHelpers.OnDeviceCo
         }
         if (!mDeviceInfo.getUserCreated()) //this is not a user created device, so we add it to the 'seen' devices
             addSeenDevice(mDeviceInfo);
-        openDeviceMenu();
+        //openDeviceMenu();
     }
 
     private void addSeenDevice(DeviceInfoProto.DeviceInfo dev) {

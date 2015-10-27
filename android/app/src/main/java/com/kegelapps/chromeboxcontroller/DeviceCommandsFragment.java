@@ -90,6 +90,8 @@ public class DeviceCommandsFragment extends Fragment {
         if (commands != null) {
             mAdapter.addCommands(commands);
         }
+        mAdapter.notifyDataSetChanged();
+        Log.d("RYAN", "Retrieved settings.");
     }
 
     private void createMessageHandler() {
@@ -100,6 +102,9 @@ public class DeviceCommandsFragment extends Fragment {
                     case ControllerService.MESSAGE_RECEIVED_MESSAGE:
                         if (data.hasCommand() && data.getCommand().hasReturnValue()) { //we are getting a result from a command
                             processCommandResult();
+                        }
+                        if (data.hasCommandList()) {
+                            processDeviceCommands(data.getCommandList());
                         }
                     default:
                         break;
