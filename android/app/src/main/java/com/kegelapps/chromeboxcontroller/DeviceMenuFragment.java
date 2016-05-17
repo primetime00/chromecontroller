@@ -12,15 +12,20 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.TabHost;
+import android.widget.TabWidget;
 
+import com.kegelapps.chromeboxcontroller.proto.DisplayProto;
 import com.kegelapps.chromeboxcontroller.proto.MessageProto;
 
 /**
  * Created by Ryan on 9/6/2015.
  */
 public class DeviceMenuFragment extends Fragment implements UIHelpers.OnFragmentCancelled {
+
+    static final String ARGUMENT_KEY = "Mode";
     private View mRootView;
     private FragmentTabHost mTabMenu;
+    private TabWidget mTabWidget;
     private ControllerService.OnMessage mMessageHandler;
     private BaseActivity mActivity;
 
@@ -36,9 +41,32 @@ public class DeviceMenuFragment extends Fragment implements UIHelpers.OnFragment
         mTabMenu.setup(getActivity(), getChildFragmentManager(), android.R.id.tabcontent);
         mTabMenu.addTab(mTabMenu.newTabSpec("Info").setIndicator("Info"), DeviceInfoFragment.class, null);
         mTabMenu.addTab(mTabMenu.newTabSpec("Commands").setIndicator("Commands"), DeviceCommandsFragment.class, null);
+        mTabWidget = (TabWidget)mRootView.findViewById(android.R.id.tabs);
         mActivity = UIHelpers.getBaseActivity(this);
         createMessageHandler();
         return mRootView;
+    }
+
+    @Override
+    public void onViewStateRestored(@Nullable Bundle savedInstanceState) {
+        super.onViewStateRestored(savedInstanceState);
+        Bundle args = getArguments();
+        if (args != null) {
+            int mode = args.getInt(ARGUMENT_KEY, -1);
+            if (mode != -1) {
+                switch (DisplayProto.Display.DisplayMode.valueOf(mode)) {
+                    default:
+                    case DISPLAY_DEVICE_INFO:
+                        mTabMenu.setCurrentTab(0);
+                        mTabWidget.focusCurrentTab(0);
+                        break;
+                    case DISPLAY_DEVICE_COMMANDS:
+                        mTabMenu.setCurrentTab(1);
+                        mTabWidget.focusCurrentTab(1);
+                        break;
+                }
+            }
+        }
     }
 
     private void createMessageHandler() {
@@ -89,6 +117,7 @@ public class DeviceMenuFragment extends Fragment implements UIHelpers.OnFragment
                 @Override
                 public void run() {
                     mActivity.getService().addMessageHandler(mMessageHandler);
+                    mActivity.getService().requestConnectionState();
                 }
             });
         }

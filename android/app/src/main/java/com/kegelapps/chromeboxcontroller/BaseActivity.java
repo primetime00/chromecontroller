@@ -74,7 +74,7 @@ public class BaseActivity extends AppCompatActivity {
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.menu_base, menu);
+        //getMenuInflater().inflate(R.menu.menu_base, menu);
         return super.onCreateOptionsMenu(menu);
     }
 

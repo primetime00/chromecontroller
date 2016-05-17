@@ -24,11 +24,21 @@ public class WakeRunnable implements Runnable {
         this.listener = listener;
     }
 
+
     @Override
     public void run() {
         mActive = true;
-        String ipStr = device.getIp();
-        String macStr = device.getMac();
+        sendPacket(device.getIp(), device.getMac(), false);
+        String ip = device.getIp();
+        int end = ip.lastIndexOf(".");
+        ip = ip.substring(0, end) + ".255";
+        sendPacket(ip, device.getMac(), true);
+        mActive = false;
+    }
+
+    private void sendPacket(String ip, String mac, boolean notify) {
+        String ipStr = ip;
+        String macStr = mac;
 
         try {
             byte[] macBytes = getMacBytes(macStr);
@@ -46,15 +56,13 @@ public class WakeRunnable implements Runnable {
             socket.send(packet);
             socket.close();
             Log.d("WakeRunnable", "Wake-On-Lan Success");
-            if (listener != null);
+            if (listener != null && notify)
                 listener.onWakeSuccess();
-            mActive = false;
         }
         catch (Exception e) {
             Log.d("WakeRunnable", "Failed to parse MAC");
-            if (listener != null);
+            if (listener != null && notify)
                 listener.onWakeFail();
-            mActive = false;
         }
     }
 

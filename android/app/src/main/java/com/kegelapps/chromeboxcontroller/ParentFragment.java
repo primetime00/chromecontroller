@@ -1,14 +1,14 @@
 package com.kegelapps.chromeboxcontroller;
 
-import android.app.FragmentTransaction;
 import android.os.Bundle;
-import android.os.Handler;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+
+import com.kegelapps.chromeboxcontroller.proto.DisplayProto;
 
 import java.lang.reflect.Field;
 
@@ -85,7 +85,12 @@ public class ParentFragment extends Fragment implements FragmentOpener {
     }
 
     @Override
-    public void openDeviceMenu() {
+    public void openDeviceMenu(DisplayProto.Display.DisplayMode displayMode) {
+        if (displayMode != null) {
+            Bundle b = new Bundle();
+            b.putInt(DeviceMenuFragment.ARGUMENT_KEY, displayMode.getNumber());
+            mDeviceMenuFragment.setArguments(b);
+        }
         openFragment(mDeviceMenuFragment, R.id.parent_content, false);
     }
 
