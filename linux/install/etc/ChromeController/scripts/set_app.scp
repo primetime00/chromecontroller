@@ -1,0 +1,48 @@
+info {
+	name: "Set Current Application"
+	output_type: "none"
+	visible: true
+	choice {
+		title: "Choose a application"
+		option: "Kodi"
+		option: "Steam"
+		option: "Desktop" 
+	}
+}
+#script
+#!/bin/sh
+
+pidof steam > /dev/null 2>&1
+resSteam=$?
+pidof kodi.bin > /dev/null 2>&1
+resKodi=$?
+user=$(w -h | awk '/.*/ && $2 ~ /:0/ { print $1 }')
+
+
+killKodi() {
+	killall -s 1 kodi.bin
+}
+
+killSteam() {
+	killall -s 9 steam
+}
+
+killAll() {
+	killSteam
+	killKodi
+}
+
+if [ $1 = "Kodi" ]; then
+	echo "Running Kodi"
+	killAll
+	nohup su -c 'kodi' -s /bin/sh $user & > /dev/null &
+elif [ $1 = "Steam" ]; then
+	echo "Running Steam"
+	killAll
+	nohup su -c 'steam' -s /bin/sh $user & > /dev/null &
+elif [ $1 = "Desktop" ]; then
+	echo "Running Desktop"
+	killAll
+fi
+echo "Application has been set to $1."
+
