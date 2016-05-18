@@ -165,6 +165,7 @@ public class NetworkRunnable implements Runnable {
         try {
             mSocket.getOutputStream().write(data.array());
         } catch (IOException e) {
+            Log.d("PingEngine", "Write data exception!\n" + e.getMessage());
             e.printStackTrace();
         }
     }

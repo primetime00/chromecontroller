@@ -149,11 +149,15 @@ public class UIHelpers {
         int result = 0;
 
         // iterate over each octet
-        for(String part : ipStr.split(Pattern.quote("."))) {
-            // shift the previously parsed bits over by 1 byte
-            result = result << 8;
-            // set the low order bits to the current octet
-            result |= Integer.parseInt(part);
+        try {
+            for (String part : ipStr.split(Pattern.quote("."))) {
+                // shift the previously parsed bits over by 1 byte
+                result = result << 8;
+                // set the low order bits to the current octet
+                result |= Integer.parseInt(part);
+            }
+        } catch (NumberFormatException e ) {
+            return 0;
         }
         return result;
     }

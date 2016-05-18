@@ -28,28 +28,31 @@ public class DeviceMenuFragment extends Fragment implements UIHelpers.OnFragment
     private TabWidget mTabWidget;
     private ControllerService.OnMessage mMessageHandler;
     private BaseActivity mActivity;
-
-    public void onViewCreated(View view, Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
-    }
+    private int mCurrentTab = 0;
+    private boolean mNewArguments = false;
 
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        mRootView = inflater.inflate(R.layout.cb_device_menu, container, false);
-        mTabMenu = (FragmentTabHost)mRootView.findViewById(android.R.id.tabhost);
-        mTabMenu.setup(getActivity(), getChildFragmentManager(), android.R.id.tabcontent);
-        mTabMenu.addTab(mTabMenu.newTabSpec("Info").setIndicator("Info"), DeviceInfoFragment.class, null);
-        mTabMenu.addTab(mTabMenu.newTabSpec("Commands").setIndicator("Commands"), DeviceCommandsFragment.class, null);
-        mTabWidget = (TabWidget)mRootView.findViewById(android.R.id.tabs);
-        mActivity = UIHelpers.getBaseActivity(this);
-        createMessageHandler();
+        boolean isNull = (mRootView == null);
+        if (isNull) {
+            mRootView = inflater.inflate(R.layout.cb_device_menu, container, false);
+            mTabMenu = (FragmentTabHost) mRootView.findViewById(android.R.id.tabhost);
+            mTabMenu.setup(getActivity(), getChildFragmentManager(), android.R.id.tabcontent);
+            mTabMenu.addTab(mTabMenu.newTabSpec("Info").setIndicator("Info"), DeviceInfoFragment.class, null);
+            mTabMenu.addTab(mTabMenu.newTabSpec("Commands").setIndicator("Commands"), DeviceCommandsFragment.class, null);
+            mTabWidget = (TabWidget) mRootView.findViewById(android.R.id.tabs);
+            mActivity = UIHelpers.getBaseActivity(this);
+            createMessageHandler();
+            mTabMenu.setCurrentTab(mCurrentTab);
+            mTabWidget.focusCurrentTab(mCurrentTab);
+        }
         return mRootView;
     }
 
     @Override
-    public void onViewStateRestored(@Nullable Bundle savedInstanceState) {
-        super.onViewStateRestored(savedInstanceState);
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
         Bundle args = getArguments();
         if (args != null) {
             int mode = args.getInt(ARGUMENT_KEY, -1);
@@ -57,15 +60,30 @@ public class DeviceMenuFragment extends Fragment implements UIHelpers.OnFragment
                 switch (DisplayProto.Display.DisplayMode.valueOf(mode)) {
                     default:
                     case DISPLAY_DEVICE_INFO:
-                        mTabMenu.setCurrentTab(0);
-                        mTabWidget.focusCurrentTab(0);
+                        mCurrentTab = 0;
                         break;
                     case DISPLAY_DEVICE_COMMANDS:
-                        mTabMenu.setCurrentTab(1);
-                        mTabWidget.focusCurrentTab(1);
+                        mCurrentTab = 1;
                         break;
                 }
             }
+        }
+
+    }
+
+    @Override
+    public void setArguments(Bundle args) {
+        super.setArguments(args);
+        mNewArguments = true;
+    }
+
+    @Override
+    public void onViewStateRestored(@Nullable Bundle savedInstanceState) {
+        super.onViewStateRestored(savedInstanceState);
+        if (mNewArguments) {
+            mTabMenu.setCurrentTab(mCurrentTab);
+            mTabWidget.focusCurrentTab(mCurrentTab);
+            mNewArguments = false;
         }
     }
 

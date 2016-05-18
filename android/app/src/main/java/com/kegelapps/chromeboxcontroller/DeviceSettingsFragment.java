@@ -29,7 +29,7 @@ public class DeviceSettingsFragment extends Fragment implements UIHelpers.OnFrag
     private TextView mDeviceName, mDeviceLocation, mDeviceIP, mDeviceMAC;
     private Button mSaveButton, mCancelButton;
     private BaseActivity mActivity;
-    private DeviceInfoProto.DeviceInfo mDeviceInfo;
+    private DeviceInfoProto.DeviceInfo mDeviceInfo, mOldDeviceInfo;
 
     @Nullable
     @Override
@@ -56,12 +56,15 @@ public class DeviceSettingsFragment extends Fragment implements UIHelpers.OnFrag
         mCancelButton = (Button) view.findViewById(R.id.cancel);
 
 
+
+
         mActivity.runServiceItem(new Runnable() {
             @Override
             public void run() {
                 mDeviceInfo = mActivity.getService().getDeviceInfo();
                 if (mDeviceInfo == null)
                     mDeviceInfo = DeviceInfoProto.DeviceInfo.getDefaultInstance();
+                mOldDeviceInfo = DeviceInfoProto.DeviceInfo.newBuilder(mDeviceInfo).build();
                 setupSettings();
                 setupButtons();
                 updateView();
@@ -76,6 +79,7 @@ public class DeviceSettingsFragment extends Fragment implements UIHelpers.OnFrag
             @Override
             public void onClick(View v) {
                 if (mDeviceInfo.hasIp() && mDeviceInfo.hasName()) { //this is good enough for me
+                    mActivity.getStorage().removeUserDevice(mOldDeviceInfo);
                     mActivity.getStorage().addUserDevice(mDeviceInfo);
                     mActivity.getStorage().saveUserDevices();
                     openDeviceList();
