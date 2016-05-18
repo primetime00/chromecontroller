@@ -3,6 +3,7 @@
 # Provides:          chromeboxcontroller
 # Required-Start:    $avahi-daemon
 # Should-Start:	     $syslog
+# Required-Stop:     $syslog
 # Should-Stop:       $syslog
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6

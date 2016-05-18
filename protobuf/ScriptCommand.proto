@@ -30,6 +30,7 @@ message PostCommand {
 
 message ScriptCommand {
 	required ScriptInfo info = 1;
+    optional bool start_up = 3 [default = false];
 	optional string script = 2;
 }
 

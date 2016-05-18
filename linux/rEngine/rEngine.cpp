@@ -67,12 +67,15 @@ int rEngine::run()
 bool rEngine::createServer()
 {
 	mDevInfo = boost::shared_ptr<rProtos::DeviceInfo>(populateDeviceInfo());
-	std::string mac, ip;
+	std::string mac, ip, mode;
 	netinfo::getIfInfo(mac, ip);
 	if (mac.length() == 0 || ip.length() == 0)
 		netinfo::waitForIP(mac, ip);
 
     mScripts = boost::make_shared<rScripts>();
+    mScripts->readScripts();
+
+    mScripts->runScript("Get Current Mode", mode);
 
 
 	std::string output;
@@ -81,12 +84,17 @@ bool rEngine::createServer()
 		mDevInfo = boost::shared_ptr<rProtos::DeviceInfo>(new rProtos::DeviceInfo());
 		mDevInfo->set_mac(mac);
 		mDevInfo->set_ip(ip);
+		if (mScripts->runScript("Get Current Mode", mode))
+            mDevInfo->set_mode(mode);
+
 		avahi::createServiceInfoFile("/etc/avahi/services/remotecontrol.service", *mDevInfo);
 	}
-	if (!mDevInfo->has_mac() || mac != mDevInfo->mac())
+	if ( (!mDevInfo->has_mac() || mac != mDevInfo->mac()) || (!mDevInfo->has_mode() || mode != mDevInfo->mode()))
 	{
 		mDevInfo->set_mac(mac);
 		mDevInfo->set_ip(ip);
+		if (mScripts->runScript("Get Current Mode", mode))
+            mDevInfo->set_mode(mode);
 		avahi::createServiceInfoFile("/etc/avahi/services/remotecontrol.service", *mDevInfo);
 	}
 	if (netinfo::isLocalHost())
@@ -134,6 +142,10 @@ int rEngine::connectionEstablished()
 	auto ret = mProcessor->createMessage();
 	ret->set_allocated_deviceinfo(populateDeviceInfo());
     ret->set_allocated_commandlist(mScripts->getScriptInfoList());
+
+    rProtos::Display *disp =  new rProtos::Display();
+    disp->set_display_mode(rProtos::Display::DISPLAY_DEVICE_INFO);
+    ret->set_allocated_display(disp);
 	if (convertMessageToVectorData(ret))
 		mServer->GetConnection()->Send(mByteData);
 	return 0;

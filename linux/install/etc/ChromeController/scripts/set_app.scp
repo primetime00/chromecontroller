@@ -20,7 +20,7 @@ user=$(w -h | awk '/.*/ && $2 ~ /:0/ { print $1 }')
 
 
 killKodi() {
-	killall -s 1 kodi.bin
+	killall -s 9 kodi.bin
 }
 
 killSteam() {
@@ -35,11 +35,11 @@ killAll() {
 if [ $1 = "Kodi" ]; then
 	echo "Running Kodi"
 	killAll
-	nohup su -c 'kodi' -s /bin/sh $user & > /dev/null &
+	nohup su -c 'DISPLAY=:0 kodi -fs' -s /bin/sh $user & > /dev/null &
 elif [ $1 = "Steam" ]; then
 	echo "Running Steam"
 	killAll
-	nohup su -c 'steam' -s /bin/sh $user & > /dev/null &
+	nohup su -c 'DISPLAY=:0 steam -tenfoot' -s /bin/sh $user & > /dev/null &
 elif [ $1 = "Desktop" ]; then
 	echo "Running Desktop"
 	killAll

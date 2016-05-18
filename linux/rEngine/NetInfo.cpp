@@ -50,7 +50,7 @@ namespace netinfo
 				if (p = strstr(p, "inet "))
 				{
 					data = std::string(p);
-					boost::regex e("inet (.*?)/.*global (.*?)\n");
+					boost::regex e("inet (.*?)/.*global.*?(\\w+)\n");
 					boost::smatch results;
 					std::string::const_iterator start = data.begin();
 					std::string::const_iterator end = data.end();

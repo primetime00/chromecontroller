@@ -3,7 +3,12 @@
 #include <boost/log/trivial.hpp>
 #include "google/protobuf/text_format.h"
 #include <fstream>
+#include <chrono>
+#include <thread>
 #include "boost/algorithm/string.hpp"
+#include "boost/date_time/posix_time/posix_time.hpp"
+#include "boost/thread/thread.hpp"
+#include "boost/process.hpp"
 #include <boost/filesystem.hpp>
 #include <sys/stat.h>
 #include <stdio.h>
@@ -11,7 +16,6 @@
 
 rScripts::rScripts() : scripts(new rProtos::ScriptCommandList())
 {
-    readScripts();
 }
 
 rScripts::~rScripts()
@@ -75,28 +79,76 @@ void rScripts::postProcessScript(rProtos::ScriptCommand *cmd)
 {
     rProtos::ScriptInfo *info = cmd->mutable_info();
 
+    //check for startup scripts
+    if (cmd->start_up())
+    {
+        processStartScripts(info);
+    }
     //check for choice scripts
     if (info->has_choice())
     {
-        rProtos::ScriptChoice *choice = info->mutable_choice();
-        if (choice->has_option_script())
+        processChoiceScripts(info);
+    }
+}
+
+void rScripts::processChoiceScripts(rProtos::ScriptInfo *info)
+{
+    rProtos::ScriptChoice *choice = info->mutable_choice();
+    if (choice->has_option_script())
+    {
+        std::string option_script = choice->option_script();
+        rProtos::ScriptInfo cpInfo;
+        cpInfo.CopyFrom(*getScriptInfo(option_script));
+        runScript( cpInfo );
+        if (!cpInfo.run_failed() && cpInfo.has_return_data())
         {
-            std::string option_script = choice->option_script();
-            rProtos::ScriptInfo cpInfo;
-            cpInfo.CopyFrom(*getScriptInfo(option_script));
-            runScript( cpInfo );
-            if (!cpInfo.run_failed() && cpInfo.has_return_data())
-            {
-                std::string result = cpInfo.return_data();
-                std::vector<std::string> option_list;
-                boost::algorithm::trim(result);
-                boost::split(option_list, result, boost::is_any_of("\n"), boost::token_compress_on);
-                for (auto val : option_list)
-                    choice->add_option(val);
-            }
+            std::string result = cpInfo.return_data();
+            std::vector<std::string> option_list;
+            boost::algorithm::trim(result);
+            boost::split(option_list, result, boost::is_any_of("\n"), boost::token_compress_on);
+            for (auto val : option_list)
+                choice->add_option(val);
         }
     }
 }
+
+bool rScripts::runScript(std::string name, std::string &data)
+{
+    rProtos::ScriptInfo cpInfo;
+    auto script = getScriptInfo(name);
+    if (script == 0)
+        return false;
+    cpInfo.CopyFrom(*script);
+    runScript( cpInfo );
+    if (!cpInfo.run_failed() && cpInfo.has_return_data())
+    {
+        data = cpInfo.return_data();
+        boost::algorithm::trim(data);
+        return true;
+    }
+    return false;
+}
+
+void rScripts::processStartScripts(rProtos::ScriptInfo *info)
+{
+    rProtos::ScriptInfo cpInfo;
+    auto script = getScriptInfo(info->name());
+    if (script == 0)
+        return;
+    cpInfo.CopyFrom(*script);
+    runScript( cpInfo );
+    if (!cpInfo.run_failed() && cpInfo.has_return_data())
+    {
+        std::string result = cpInfo.return_data();
+        boost::algorithm::trim(result);
+        for (auto func : mStartupScriptResults)
+        {
+            func(cpInfo.name(), result);
+        }
+
+    }
+}
+
 
 bool rScripts::writeScript(const rProtos::ScriptInfo &info)
 {
@@ -118,8 +170,9 @@ bool rScripts::writeScript(const rProtos::ScriptInfo &info)
     return false;
 }
 
-bool rScripts::runScript(rProtos::ScriptInfo &info)
+bool rScripts::runScriptB(rProtos::ScriptInfo &info)
 {
+/*
     std::string output="";
     bool res = writeScript(info);
     if (res == false) {
@@ -133,17 +186,32 @@ bool rScripts::runScript(rProtos::ScriptInfo &info)
     {
         ss << val << " ";
     }
-    FILE *f = popen(ss.str().c_str(), "r");
-    if (f == 0)
+    if (info.output_type().compare("none") != 0) //we need to wait on the output
     {
-        BOOST_LOG_TRIVIAL(debug) << "Could not execute remote script!";
-        info.set_run_failed(true);
-        return false;
+        FILE *f = popen(ss.str().c_str(), "r");
+        if (f == 0)
+        {
+            BOOST_LOG_TRIVIAL(debug) << "Could not execute remote script!";
+            info.set_run_failed(true);
+            return false;
+        }
+        char buffer[4000]; //4k buffer?
+        while (fgets( buffer, 4000, f))
+        {
+            output += buffer;
+        }
     }
-    char buffer[4000]; //4k buffer?
-    while (fgets( buffer, 4000, f))
+    else //we don't care about the output
     {
-        output += buffer;
+        pid_t pid = fork();
+        if (pid < 0)
+        {
+            BOOST_LOG_TRIVIAL(debug) << "Failed to fork";
+            exit(0);
+        }
+        else if (pid == 0) //child
+        {
+        }
     }
     rProtos::ScriptInfo *original = getScriptInfo(info.name());
     info.Clear();
@@ -155,9 +223,67 @@ bool rScripts::runScript(rProtos::ScriptInfo &info)
     if (exit_code == 127) //command was not found
         info.set_run_failed(true);
     BOOST_LOG_TRIVIAL(debug) << "returns:\n" << output ;
-    BOOST_LOG_TRIVIAL(debug) << "code:\n" << exit_code ;
+    BOOST_LOG_TRIVIAL(debug) << "code:\n" << exit_code ;*/
     return true;
 }
+
+bool rScripts::runScript(rProtos::ScriptInfo &info)
+{
+
+    std::string output="";
+    bool res = writeScript(info);
+    if (res == false) {
+        BOOST_LOG_TRIVIAL(debug) << "Could not write the script file!";
+        info.set_run_failed(true);
+        return false;
+    }
+    std::string exec = "/tmp/remote_script.sh";
+    std::vector<std::string> args;
+    args.push_back(exec);
+    for (auto val : info.params())
+    {
+        args.push_back(val);
+    }
+    boost::process::context ctx;
+    if (info.output_type().compare("none") != 0) //we need to wait on the output
+        ctx.stdout_behavior = boost::process::capture_stream();
+    else
+        ctx.stdout_behavior = boost::process::silence_stream();
+    ctx.environment = boost::process::self::get_environment();
+    {
+        auto child = boost::process::launch(exec, args, ctx);
+
+        if (info.output_type().compare("none") != 0) //we need to wait on the output
+        {
+            boost::process::pistream &is = child.get_stdout();
+            std::string line;
+            while (std::getline(is, line))
+            {
+                output+=line;
+                output+="\n";
+            }
+            boost::process::posix_status s = child.wait();
+            info.set_return_data(output);
+            info.set_return_value(s.exit_status());
+            if (s.exit_status() == 127) //command was not found
+                info.set_run_failed(true);
+            BOOST_LOG_TRIVIAL(debug) << "script:" << info.name() << " " << "returns: " << output ;
+            BOOST_LOG_TRIVIAL(debug) << "code: " << s.exit_status() ;
+            return true;
+        }
+        else
+        {
+            boost::process::posix_status s = child.wait();
+            info.set_return_data("");
+            info.set_return_value(0);
+            BOOST_LOG_TRIVIAL(debug) << "launched " << boost::algorithm::join(args, " ");
+            BOOST_LOG_TRIVIAL(debug) << "script:" << info.name() << " " << "returns: " << "(none)";
+            BOOST_LOG_TRIVIAL(debug) << "code: " << 0 ;
+            return true;
+        }
+    }
+}
+
 
 rProtos::ScriptInfo * rScripts::getScriptInfo(std::string name)
 {
@@ -202,4 +328,9 @@ rProtos::ScriptInfoList *rScripts::getScriptInfoList()
         scriptInfos->add_scripts()->CopyFrom(it.info());
     }
     return scriptInfos;
+}
+
+void rScripts::addStartupScriptHandler(ScriptHandler func)
+{
+    mStartupScriptResults.push_back(func);
 }
